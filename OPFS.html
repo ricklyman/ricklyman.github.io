@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v8.8: Restored Search & Filter</title>
+    <title>IDE v8.9: Deep Search & Full Suite</title>
     <style>
         :root {
             --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
@@ -25,12 +25,14 @@
         .pane { display: none; flex: 1; flex-direction: column; padding: 12px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* Tree & Drag */
+        /* Tree UI & Drag Styles */
         .tree-root-node { font-weight: bold; color: var(--primary); margin-bottom: 5px; font-size: 11px; padding: 0 8px; }
         .tree-item { margin-left: 18px; border-left: 1px solid rgba(0,0,0,0.1); }
         .tree-row { display: flex; align-items: center; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; user-select: none; border: 1px solid transparent; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
         .tree-row.active { background: #e7f3ff; color: var(--primary); font-weight: 600; }
+        
+        /* Drag Targets */
         .drag-over { background: rgba(24, 119, 242, 0.1); border: 1px dashed var(--primary); }
         .folder-icon { margin-right: 6px; font-size: 10px; width: 12px; display: inline-block; transition: transform 0.1s; }
 
@@ -42,7 +44,8 @@
         /* DB & Inputs */
         .db-entry { background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 4px; padding: 8px; margin-bottom: 8px; }
         .db-input, input[type="text"] { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
-        
+        .net-item { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; font-family: monospace; }
+
         /* Workspace */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr 140px; background: #ccc; }
         .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; height: 100%; }
@@ -70,7 +73,7 @@
 <body>
 
 <header>
-    <div>Local IDE v8.8 (OPFS)</div>
+    <div>Local IDE v8.9 (OPFS)</div>
     <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
 </header>
 
@@ -117,10 +120,10 @@
         </div>
 
         <div id="toolsPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">PROJECT SEARCH</div>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
             <input type="text" id="searchAll" placeholder="Search in all files...">
             <button class="btn-blue" id="searchAllBtn" style="width:100%; margin-bottom:10px;">Find All</button>
-            <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom:15px; border:1px solid #eee;"></div>
+            <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom:15px; border:1px solid #eee; background:#fafafa;"></div>
 
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
             <input type="text" id="gFind" placeholder="Find text...">
@@ -149,7 +152,7 @@
                 CONSOLE & AUDIT LOGS
                 <span id="mitigateBtn" style="color:var(--warn); cursor:pointer; display:none;" onclick="applyMitigation()">[ FIX VULNERABILITIES ]</span>
             </div>
-            <div id="console">> IDE Ready. Drag & Drop + Search restored.</div>
+            <div id="console">> IDE Ready. Deep Search enabled.</div>
         </div>
     </div>
 </div>
@@ -182,7 +185,6 @@
             rootHandle = await navigator.storage.getDirectory();
             document.getElementById('tree-root-header').textContent = `📁 OPFS://ROOT`;
             
-            // Root Drop Zone
             const header = document.getElementById('tree-root-header');
             header.ondragover = e => { e.preventDefault(); header.style.background = '#e7f3ff'; };
             header.ondragleave = () => header.style.background = 'transparent';
@@ -200,15 +202,16 @@
         } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
     };
 
-    // --- SEARCH & FILTER ---
+    // --- DEEP SEARCH & FILTER ---
     document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
 
     document.getElementById('searchAllBtn').onclick = async () => {
         const q = document.getElementById('searchAll').value.toLowerCase();
         const res = document.getElementById('searchResults');
-        res.innerHTML = "";
+        res.innerHTML = "<div>Scanning...</div>";
         if(!q || !rootHandle) return;
         
+        let found = 0;
         async function scan(h, path="") {
             for await (const e of h.values()) {
                 if(e.kind==='directory') await scan(e, path + e.name + "/");
@@ -217,19 +220,20 @@
                     const lines = txt.split('\n');
                     lines.forEach((l, i) => {
                         if(l.toLowerCase().includes(q)) {
+                            found++;
                             const d = document.createElement('div');
                             d.className = 'search-result';
                             d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
                             d.onclick = () => loadFile(e);
+                            if(found === 1) res.innerHTML = ""; // Clear "Scanning..." on first match
                             res.appendChild(d);
                         }
                     });
                 }
             }
         }
-        res.innerHTML = "<div>Searching...</div>";
         await scan(rootHandle);
-        if(res.children.length === 1) res.innerHTML = "<div>No matches found.</div>";
+        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
     };
 
     // --- DRAG & DROP ENGINE ---
@@ -370,42 +374,4 @@
     };
 
     document.getElementById('runBtn').onclick = () => {
-        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
-        document.getElementById('preview').src = URL.createObjectURL(new Blob([hook + sanitize(editor.value)], {type: 'text/html'}));
-    };
-
-    window.addEventListener('message', (e) => {
-        if(e.data.type === 'network') {
-            const d = document.createElement('div'); d.className='net-item'; 
-            d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
-            document.getElementById('netList').prepend(d);
-        }
-    });
-
-    document.getElementById('saveBtn').onclick = async () => {
-        const w = await currentFileHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.");
-    };
-    
-    document.getElementById('gReplaceBtn').onclick = async () => {
-        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
-        if(!f || !rootHandle) return;
-        async function run(h) { for await (const e of h.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
-        await run(rootHandle); log("Replaced.");
-    };
-
-    document.getElementById('backupBtn').onclick = async () => {
-        const zip = new JSZip();
-        async function walk(h, folder) { for await (const e of h.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
-        await walk(rootHandle, zip);
-        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
-    };
-
-    document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }};
-
-    editor.oninput = () => { hContent.innerHTML = applyHighlight(editor.value) + "\n"; };
-    editor.onscroll = () => { lineNumbers.scrollTop = editor.scrollTop; document.getElementById('highlighting').scrollTop = editor.scrollTop; };
-</script>
-</body>
-</html>
+        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args
