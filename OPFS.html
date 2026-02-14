@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.7: All Tabs Restored</title>
+    <title>IDE v9.8: Fixed Tree & Tools</title>
     <style>
-        /* --- THEME & VARIABLES --- */
         :root {
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
@@ -18,7 +17,6 @@
             --accent: #0f0; --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0; --comm: #006400;
         }
 
-        /* --- LAYOUT --- */
         body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
         header { 
@@ -26,85 +24,66 @@
             display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; 
         }
 
+        /* Fixed Controls Layout */
         .controls { 
-            padding: 8px 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); 
-            display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; 
+            padding: 8px 10px; background: var(--sidebar); border-bottom: 1px solid var(--border); 
+            display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; 
         }
 
         .main-layout { display: flex; flex: 1; overflow: hidden; }
 
-        /* --- SIDEBAR & TABS --- */
         .sidebar { width: 340px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         
-        .tab-row { display: flex; background: rgba(0,0,0,0.05); overflow-x: auto; }
+        .tab-row { display: flex; background: rgba(0,0,0,0.05); }
         .tab { 
-            flex: 1; padding: 10px 5px; text-align: center; font-size: 10px; font-weight: bold; 
-            cursor: pointer; opacity: 0.7; min-width: 50px; border-bottom: 2px solid transparent; 
+            flex: 1; padding: 10px 0; text-align: center; font-size: 10px; font-weight: bold; 
+            cursor: pointer; opacity: 0.6; border-bottom: 2px solid transparent; 
         }
         .tab.active { background: var(--sidebar); color: var(--accent); border-bottom: 2px solid var(--accent); opacity: 1; }
         
         .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* --- PANE SPECIFIC STYLES --- */
-        /* Tree */
-        .tree-row { padding: 4px 8px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; font-size: 13px; }
+        /* Tree UI */
+        .tree-row { padding: 4px 0; cursor: pointer; display: flex; align-items: center; font-size: 13px; white-space: nowrap; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
         .tree-row.active { background: rgba(24, 119, 242, 0.1); color: var(--accent); font-weight: 600; }
-        
-        /* DB */
+        .tree-item { margin-left: 15px; border-left: 1px solid var(--border); }
+        .folder-icon { width: 14px; text-align: center; display: inline-block; font-size: 10px; margin-right: 4px; }
+
+        /* DB Styles */
         .db-entry { padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); margin-bottom: 6px; background: rgba(255,255,255,0.5); border-radius: 4px; }
         .db-title { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
         .db-desc { font-size: 11px; opacity: 0.8; }
-        
-        /* Network */
-        .net-item { font-family: monospace; font-size: 11px; padding: 5px; border-bottom: 1px solid var(--border); }
-        
-        /* Search */
-        .search-res { padding: 6px; border-bottom: 1px solid var(--border); font-size: 11px; cursor: pointer; }
-        .search-res:hover { background: rgba(0,0,0,0.05); }
+        .db-input { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
 
-        /* --- EDITOR ENGINE --- */
+        /* Workspace */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; min-width: 0; background: var(--bg); }
-        
         .editor-container { position: relative; display: flex; overflow: hidden; }
-        #line-numbers { 
-            width: 45px; background: var(--line-bg); color: var(--line-text); text-align: right; 
-            padding: 10px 5px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; 
-            border-right: 1px solid var(--border); user-select: none; 
-        }
+        #line-numbers { width: 40px; background: var(--line-bg); color: var(--line-text); text-align: right; padding: 10px 5px; font-family: monospace; font-size: 13px; line-height: 1.5; border-right: 1px solid var(--border); user-select: none; }
         .editor-stack { flex: 1; position: relative; min-width: 0; }
-        
-        #editor, #highlighting { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 10px; border: 0;
-            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; white-space: pre; 
-            box-sizing: border-box; 
-        }
+        #editor, #highlighting { position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 10px; border: 0; font-family: monospace; font-size: 13px; line-height: 1.5; white-space: pre; box-sizing: border-box; }
         #editor { color: transparent; background: transparent; caret-color: var(--text); z-index: 2; overflow: scroll; resize: none; outline: none; }
         #highlighting { color: var(--text); z-index: 1; pointer-events: none; overflow: hidden; }
-
-        /* --- CONSOLE --- */
         #console-container { height: 140px; background: #1e1e1e; color: #ccc; display: flex; flex-direction: column; transition: 0.2s; border-top: 2px solid var(--border); }
-        #console-container.minimized { height: 30px; }
-        .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; }
+        .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
 
-        /* UI Elements */
-        button { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; margin-top: 4px; }
+        button { padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; margin-top: 4px; }
         .btn-p { background: var(--accent); color: #fff; border: none; }
         .btn-d { background: var(--danger); color: #fff; border: none; }
-        input { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+        .btn-sm { font-size: 10px; padding: 4px 8px; }
+        input[type="text"] { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; }
         
         /* Syntax Colors */
         .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } .t-str { color: var(--str); } .t-key { color: var(--key); font-weight: bold; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="gemini">
 
 <header>
-    <div>IDE v9.7 <span style="opacity:0.5; font-weight:400;">(OPFS • Full Suite)</span></div>
+    <div>IDE v9.8 <span style="opacity:0.5; font-weight:400;">(OPFS • Full Fix)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -116,9 +95,8 @@
     <button id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
-    <button id="demoBtn" disabled>Load Demo</button>
-    <button id="backupBtn" disabled>💾 ZIP</button>
-</div>
+    <button id="newFolderBtn" disabled>+ Folder</button> <button id="demoBtn" disabled>Demo</button>
+    <button id="backupBtn" disabled>💾 ZIP</button> </div>
 
 <div class="main-layout">
     <div class="sidebar">
@@ -136,8 +114,8 @@
 
         <div id="searchPane" class="pane">
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">PROJECT SEARCH</div>
-            <input type="text" id="deepSearchInput" placeholder="Text to find...">
-            <button class="btn-p" style="width:100%" id="deepSearchBtn">Find All</button>
+            <input type="text" id="searchAll" placeholder="Search in all files...">
+            <button class="btn-p" style="width:100%" id="searchAllBtn">Find All</button>
             <div id="searchResults" style="margin-top:10px;"></div>
         </div>
 
@@ -146,12 +124,12 @@
                 <b style="font-size:11px;">VULNERABILITY LOG</b>
                 <span onclick="loadDB()" style="cursor:pointer; color:var(--accent); font-size:10px;">REFRESH</span>
             </div>
-            <div id="dbList"></div>
-            <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
+            <div id="dbList" style="margin-bottom:15px; max-height:150px; overflow-y:auto; border:1px solid var(--border); padding:5px;"></div>
+            
             <b style="font-size:11px;">ADD ENTRY</b>
-            <input type="text" id="dbTitle" placeholder="Title...">
-            <input type="text" id="dbDesc" placeholder="Description...">
-            <button class="btn-p" style="width:100%" id="addDbEntryBtn">Save Log</button>
+            <input type="text" id="dbTitle" class="db-input" placeholder="Title...">
+            <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
+            <button class="btn-p" style="width:100%" id="addDbEntryBtn">Save Entry</button>
         </div>
 
         <div id="netPane" class="pane">
@@ -160,12 +138,13 @@
         </div>
 
         <div id="toolsPane" class="pane">
-            <b style="font-size:11px;">GLOBAL REPLACE</b>
-            <input type="text" id="gFind" placeholder="Find...">
-            <input type="text" id="gReplace" placeholder="Replace...">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
+            <input type="text" id="gFind" placeholder="Find text...">
+            <input type="text" id="gReplace" placeholder="Replace with...">
             <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
-            <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
-            <b style="font-size:11px;">THEME</b>
+            
+            <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEME</div>
             <button onclick="document.body.className='gemini'" style="width:100%">Gemini Light</button>
             <button onclick="document.body.className='midnight'" style="width:100%">Midnight Dark</button>
         </div>
@@ -176,13 +155,12 @@
             <div id="line-numbers">1</div>
             <div class="editor-stack">
                 <pre id="highlighting"><code id="h-content"></code></pre>
-                <textarea id="editor" spellcheck="false" wrap="off" placeholder="Initialize to start..."></textarea>
+                <textarea id="editor" spellcheck="false" wrap="off" placeholder="Initialize OPFS to start..."></textarea>
             </div>
         </div>
         <div id="console-container">
-            <div class="c-toolbar" onclick="toggleConsole()">
-                <span>CONSOLE</span>
-                <span>▼</span>
+            <div class="c-toolbar" onclick="document.getElementById('console-container').classList.toggle('minimized')">
+                <span>CONSOLE</span><span>▼</span>
             </div>
             <div id="console"></div>
         </div>
@@ -199,7 +177,7 @@
 
     // --- TAB LOGIC ---
     function tab(id) {
-        document.querySelectorAll('.tab, .pane').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab, .pane').forEach(e => e.classList.remove('active'));
         document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
         document.getElementById(id+'Pane').classList.add('active');
     }
@@ -234,24 +212,53 @@
             rootHandle = await navigator.storage.getDirectory();
             try { await rootHandle.getFileHandle('vuln_db.json'); }
             catch { const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true}); const w = await fh.createWritable(); await w.write("[]"); await w.close(); }
-            await buildTree();
+            
+            await buildTree(rootHandle, document.getElementById('tree-root'));
+            
             document.querySelectorAll('button').forEach(b => b.disabled = false);
             loadDB();
             log("System Initialized.", "ok");
         } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- FILE TREE ---
-    async function buildTree() {
-        const root = document.getElementById('tree-root');
-        root.innerHTML = "";
-        for await (const e of rootHandle.values()) {
-            if(e.name === 'vuln_db.json') continue; // Hide DB file
-            const div = document.createElement('div');
-            div.className = 'tree-row';
-            div.innerHTML = e.kind === 'directory' ? `📁 ${e.name}` : `📄 ${e.name}`;
-            div.onclick = () => { if(e.kind==='file') loadFile(e); };
-            root.appendChild(div);
+    // --- RECURSIVE FILE TREE (FIXED) ---
+    async function buildTree(dirHandle, container) {
+        container.innerHTML = "";
+        const entries = [];
+        for await (const e of dirHandle.values()) entries.push(e);
+        entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
+        
+        for (const e of entries) {
+            if(e.name === 'vuln_db.json') continue; // Hide DB
+            
+            const row = document.createElement('div');
+            row.className = 'tree-row';
+            
+            if (e.kind === 'directory') {
+                row.innerHTML = `<span class="folder-icon">▶</span> 📁 ${e.name}`;
+                const sub = document.createElement('div');
+                sub.className = 'tree-item';
+                sub.style.display = 'none';
+                
+                row.onclick = async (evt) => {
+                    evt.stopPropagation();
+                    const icon = row.querySelector('.folder-icon');
+                    if (sub.style.display === 'none') {
+                        sub.style.display = 'block';
+                        icon.innerHTML = '▼';
+                        await buildTree(e, sub); // Recursion!
+                    } else {
+                        sub.style.display = 'none';
+                        icon.innerHTML = '▶';
+                    }
+                };
+                container.appendChild(row);
+                container.appendChild(sub);
+            } else {
+                row.innerHTML = `📄 ${e.name}`;
+                row.onclick = (evt) => { evt.stopPropagation(); loadFile(e); };
+                container.appendChild(row);
+            }
         }
     }
 
@@ -263,44 +270,23 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- RUN & NET ---
-    document.getElementById('runBtn').onclick = () => {
-        const hook = `<script>
-            (function(){
-                const send=(t,d)=>window.opener.postMessage({type:t,...d},'*');
-                console.log=function(){send('console',{msg:Array.from(arguments).join(' ')})};
-                window.onerror=(m)=>send('console',{msg:'ERR: '+m});
-                const of=window.fetch;
-                window.fetch=async(...a)=>{
-                    try{const r=await of.apply(this,a); send('network',{m:'GET',u:a[0].url||a[0],s:r.status}); return r;}
-                    catch(e){send('network',{m:'GET',u:a[0],s:'ERR'}); throw e;}
-                }
-            })();
-        <\/script>`;
-        const blob = new Blob([hook + editor.value], {type:'text/html'});
-        window.open(URL.createObjectURL(blob), '_blank');
-        log("Run in new window.", "ok");
-    };
-
-    window.addEventListener('message', (e) => {
-        if(e.data.type === 'network') {
-            const d = document.createElement('div'); d.className='net-item';
-            d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`;
-            document.getElementById('netList').prepend(d);
-        }
-        if(e.data.type === 'console') log(e.data.msg);
-    });
-
-    // --- AUDIT & DB (FIXED) ---
+    // --- AUDIT & DB ---
     document.getElementById('auditBtn').onclick = async () => {
         log("Scanning...", "warn");
         const findings = [];
-        for await (const e of rootHandle.values()) {
-            if(e.kind==='file' && e.name.endsWith('.html')) {
-                const t = await (await e.getFile()).text();
-                if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`innerHTML in ${e.name}`});
+        
+        async function scan(dir) {
+            for await (const e of dir.values()) {
+                if(e.kind==='directory') await scan(e);
+                else {
+                    if(e.name === 'vuln_db.json') continue;
+                    const t = await (await e.getFile()).text();
+                    if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`Found in ${e.name}`});
+                    if(t.includes('http:')) findings.push({title:"Insecure HTTP", desc:`Found in ${e.name}`});
+                }
             }
         }
+        await scan(rootHandle);
         
         if(findings.length > 0) {
             log(`Found ${findings.length} issues. Saving...`, "err");
@@ -322,7 +308,7 @@
             const list = document.getElementById('dbList');
             list.innerHTML = "";
             const data = txt ? JSON.parse(txt) : [];
-            if(data.length === 0) list.innerHTML = "<div style='font-size:11px; opacity:0.5'>(Empty)</div>";
+            if(data.length === 0) list.innerHTML = "<div style='font-size:10px;opacity:0.5'>(Empty)</div>";
             else data.forEach(x => {
                 list.innerHTML += `<div class="db-entry"><div class="db-title">${x.title}</div><div class="db-desc">${x.desc}</div></div>`;
             });
@@ -342,50 +328,88 @@
     };
 
     // --- SEARCH ---
-    document.getElementById('deepSearchBtn').onclick = async () => {
-        const q = document.getElementById('deepSearchInput').value;
+    document.getElementById('searchAllBtn').onclick = async () => {
+        const q = document.getElementById('searchAll').value.toLowerCase();
         const res = document.getElementById('searchResults');
         res.innerHTML = "";
         if(!q) return;
-        for await (const e of rootHandle.values()) {
-            if(e.kind==='file') {
-                const t = await (await e.getFile()).text();
-                if(t.includes(q)) {
-                    const d = document.createElement('div');
-                    d.className = 'search-res'; d.textContent = `Found in: ${e.name}`;
-                    d.onclick = () => loadFile(e);
-                    res.appendChild(d);
+        async function scan(dir) {
+            for await (const e of dir.values()) {
+                if(e.kind==='directory') await scan(e);
+                else {
+                    const t = await (await e.getFile()).text();
+                    if(t.toLowerCase().includes(q)) {
+                        const d = document.createElement('div');
+                        d.style.padding="4px"; d.style.cursor="pointer"; d.style.borderBottom="1px solid #eee";
+                        d.innerHTML = `Found in: <b>${e.name}</b>`;
+                        d.onclick = () => loadFile(e);
+                        res.appendChild(d);
+                    }
                 }
             }
         }
-        if(res.children.length===0) res.innerHTML = "<div style='font-size:11px'>No matches.</div>";
+        await scan(rootHandle);
+        if(res.children.length===0) res.innerHTML = "No matches.";
     };
 
-    // --- DEMO & SAVE ---
-    document.getElementById('demoBtn').onclick = async () => {
-        const name = "vuln_demo.html";
-        const content = `<html><body><h1>XSS</h1><script>document.body.innerHTML="Bad"; fetch('/track');<\/script></body></html>`;
-        const fh = await rootHandle.getFileHandle(name, {create:true});
-        const w = await fh.createWritable(); await w.write(content); await w.close();
-        buildTree();
-        log("Demo created.", "ok");
+    // --- UTILS ---
+    document.getElementById('runBtn').onclick = () => {
+        const hook = `<script>
+            (function(){
+                const send=(t,d)=>window.opener.postMessage({type:t,...d},'*');
+                console.log=function(){send('console',{msg:Array.from(arguments).join(' ')})};
+                window.onerror=(m)=>send('console',{msg:'ERR: '+m});
+                const of=window.fetch;
+                window.fetch=async(...a)=>{
+                    try{const r=await of.apply(this,a); send('network',{m:'GET',u:a[0].url||a[0],s:r.status}); return r;}
+                    catch(e){send('network',{m:'GET',u:a[0],s:'ERR'}); throw e;}
+                }
+            })();
+        <\/script>`;
+        const blob = new Blob([hook + editor.value], {type:'text/html'});
+        window.open(URL.createObjectURL(blob), '_blank');
+        log("Run in new window.", "ok");
     };
+
+    window.addEventListener('message', (e) => {
+        if(e.data.type === 'network') {
+            const d = document.createElement('div'); d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`; d.style.fontSize="11px"; d.style.borderBottom="1px solid #eee";
+            document.getElementById('netList').prepend(d);
+        }
+        if(e.data.type === 'console') log(e.data.msg);
+    });
 
     document.getElementById('saveBtn').onclick = async () => {
-        if(currentHandle) {
-            const w = await currentHandle.createWritable();
-            await w.write(editor.value); await w.close();
-            log("Saved.", "ok");
-        }
+        if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }
+    };
+    
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
+        if(!f) return;
+        async function run(dir) { for await (const e of dir.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
+        await run(rootHandle); log("Replaced.");
     };
 
-    function toggleConsole() { document.getElementById('console-container').classList.toggle('minimized'); }
-    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(); }};
+    document.getElementById('demoBtn').onclick = async () => {
+        const h = await rootHandle.getFileHandle('demo.html', {create:true});
+        const w = await h.createWritable(); await w.write('<h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script>'); await w.close();
+        await buildTree(rootHandle, document.getElementById('tree-root'));
+        log("Demo Created.", "ok");
+    };
+
     document.getElementById('backupBtn').onclick = async () => {
         const zip = new JSZip();
-        for await (const e of rootHandle.values()) { if(e.kind==='file') zip.file(e.name, await e.getFile()); }
+        async function walk(dir, folder) { for await (const e of dir.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
+        await walk(rootHandle, zip);
         const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
     };
+
+    document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
+    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); renderDB([]); }};
+
+    editor.oninput = () => { hContent.innerHTML = editor.value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "\n"; lNums.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>'); };
+    editor.onscroll = () => { hContent.parentElement.scrollTop = editor.scrollTop; hContent.parentElement.scrollLeft = editor.scrollLeft; lNums.scrollTop = editor.scrollTop; };
 </script>
 </body>
 </html>
