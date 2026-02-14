@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v10.4: Tokenized Syntax Engine</title>
+    <title>IDE v10.5: Red HTML Tags Fixed</title>
     <style>
-        /* --- GEMINI THEME PALETTE --- */
+        /* --- GEMINI THEME --- */
         :root {
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
@@ -12,12 +12,12 @@
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
             
             /* SYNTAX COLORS */
-            --tag: #d93025;  /* Red (HTML Tags) */
-            --attr: #e37400; /* Orange/Brown (Attributes) */
-            --str: #188038;  /* Green (Strings) */
-            --key: #a142f4;  /* Purple (JS Keywords) */
-            --obj: #1a73e8;  /* Blue (document, window) */
-            --comm: #747775; /* Gray (Comments) */
+            --tag: #d93025;  /* Red */
+            --attr: #e37400; /* Orange/Brown */
+            --str: #188038;  /* Green */
+            --key: #a142f4;  /* Purple */
+            --obj: #1a73e8;  /* Blue */
+            --comm: #747775; /* Gray */
         }
         body.midnight {
             --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
@@ -63,7 +63,6 @@
         .search-res { padding: 5px; border-bottom: 1px solid var(--border); font-size: 11px; cursor: pointer; }
         .search-res:hover { background: rgba(0,0,0,0.05); }
 
-        /* Fixed DB Input Section */
         .db-form { flex-shrink: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
         input[type="text"], .db-input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; font-size: 12px; background: var(--bg); color: var(--text); }
         
@@ -108,7 +107,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v10.4 <span style="opacity:0.5; font-weight:400;">(Tokenized Highlighting)</span></div>
+    <div>IDE v10.5 <span style="opacity:0.5; font-weight:400;">(Fix: Red HTML Tags)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -215,37 +214,34 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- TOKENIZED SYNTAX HIGHLIGHTER (THE FIX) ---
+    // --- SYNTAX HIGHLIGHTER (FIXED) ---
     const updateHigh = (text) => {
         // 1. Escape HTML
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-        // 2. Tokenize (Hide) HTML Tags & Strings to prevent collisions
+        // 2. Tokenize HTML Tags & Strings
         const tokens = [];
         
-        // Hide Strings first
+        // Hide Strings
         code = code.replace(/"(.*?)"/g, (m) => { tokens.push(`<span class="t-str">${m}</span>`); return `___TOK_${tokens.length-1}___`; });
         code = code.replace(/'(.*?)'/g, (m) => { tokens.push(`<span class="t-str">${m}</span>`); return `___TOK_${tokens.length-1}___`; });
 
-        // Hide HTML Tags (Beautify them while hiding)
-        code = code.replace(/(&lt;\/?[a-z0-9]+.*?>)/gi, (m) => { 
-            // Colorize the tag content BEFORE hiding it
-            let colored = m.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>'); // Tag Name (Red)
-            colored = colored.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>'); // Attributes (Orange)
+        // Hide HTML Tags (Regex adjusted to find escaped brackets &lt; &gt;)
+        code = code.replace(/(&lt;\/?[a-z0-9]+.*?&gt;)/gi, (m) => { 
+            // Colorize content INSIDE the token before hiding
+            let colored = m.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>'); // Tag Name
+            colored = colored.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>'); // Attributes
             tokens.push(colored); 
             return `___TOK_${tokens.length-1}___`; 
         });
 
-        // 3. Highlight JavaScript (Safe now!)
-        // Keywords (Purple)
+        // 3. Highlight JavaScript
         const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b";
         code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
         
-        // Objects (Blue)
         const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
         code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
         
-        // Comments (Gray)
         code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
 
         // 4. Restore Tokens
