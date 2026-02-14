@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v10.5: Red HTML Tags Fixed</title>
+    <title>IDE v10.6: Perfected Syntax</title>
     <style>
-        /* --- GEMINI THEME --- */
+        /* --- GEMINI THEME & VARIABLES --- */
         :root {
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
@@ -52,7 +52,7 @@
         .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* --- UI COMPONENTS --- */
+        /* UI Elements */
         .tree-row { padding: 4px 0; cursor: pointer; display: flex; align-items: center; font-size: 13px; white-space: nowrap; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
         .tree-row.active { background: rgba(24, 119, 242, 0.1); color: var(--accent); font-weight: 600; }
@@ -107,7 +107,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v10.5 <span style="opacity:0.5; font-weight:400;">(Fix: Red HTML Tags)</span></div>
+    <div>IDE v10.6 <span style="opacity:0.5; font-weight:400;">(Fix: Red HTML & Junk Text)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -214,38 +214,52 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- SYNTAX HIGHLIGHTER (FIXED) ---
+    // --- PERFECTED SYNTAX ENGINE ---
     const updateHigh = (text) => {
-        // 1. Escape HTML
+        // Step 1: Base Escape
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-        // 2. Tokenize HTML Tags & Strings
-        const tokens = [];
+        // Step 2: Extract & Hide Strings/Comments (to protect them)
+        const strings = [];
+        const comments = [];
         
         // Hide Strings
-        code = code.replace(/"(.*?)"/g, (m) => { tokens.push(`<span class="t-str">${m}</span>`); return `___TOK_${tokens.length-1}___`; });
-        code = code.replace(/'(.*?)'/g, (m) => { tokens.push(`<span class="t-str">${m}</span>`); return `___TOK_${tokens.length-1}___`; });
+        code = code.replace(/"(.*?)"/g, (m) => { strings.push(`<span class="t-str">${m}</span>`); return `___STR_${strings.length-1}___`; });
+        code = code.replace(/'(.*?)'/g, (m) => { strings.push(`<span class="t-str">${m}</span>`); return `___STR_${strings.length-1}___`; });
+        
+        // Hide Comments
+        code = code.replace(/(\/\/.*)/g, (m) => { comments.push(`<span class="t-comm">${m}</span>`); return `___COM_${comments.length-1}___`; });
 
-        // Hide HTML Tags (Regex adjusted to find escaped brackets &lt; &gt;)
-        code = code.replace(/(&lt;\/?[a-z0-9]+.*?&gt;)/gi, (m) => { 
-            // Colorize content INSIDE the token before hiding
-            let colored = m.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>'); // Tag Name
-            colored = colored.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>'); // Attributes
-            tokens.push(colored); 
-            return `___TOK_${tokens.length-1}___`; 
+        // Step 3: Extract & Beautify HTML Tags
+        // Note: Using [\s\S] for multiline match and non-greedy *?
+        const tags = [];
+        code = code.replace(/(&lt;\/?[a-z0-9]+[\s\S]*?&gt;)/gi, (m) => {
+            // Inside the tag, we highlight:
+            // 1. The tag name (Red)
+            let formatted = m.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
+            // 2. Attributes (Orange) - only matching words followed by =
+            formatted = formatted.replace(/(\s)([a-z-]+)(?=\s*=)/gi, '$1<span class="t-attr">$2</span>');
+            
+            tags.push(formatted);
+            return `___TAG_${tags.length-1}___`;
         });
 
-        // 3. Highlight JavaScript
+        // Step 4: Highlight JavaScript (Rest of the text)
+        // Keywords (Purple)
         const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b";
         code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
         
+        // Objects (Blue)
         const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
         code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
-        
-        code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
 
-        // 4. Restore Tokens
-        code = code.replace(/___TOK_(\d+)___/g, (m, i) => tokens[i]);
+        // Step 5: Restore Everything (Reverse Order)
+        // Restore Tags
+        code = code.replace(/___TAG_(\d+)___/g, (m, i) => tags[i]);
+        // Restore Comments
+        code = code.replace(/___COM_(\d+)___/g, (m, i) => comments[i]);
+        // Restore Strings
+        code = code.replace(/___STR_(\d+)___/g, (m, i) => strings[i]);
 
         hContent.innerHTML = code + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
