@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.0: Stable Layout & Deep Search</title>
+    <title>IDE v9.1: Multi-Window Runtime</title>
     <style>
         :root {
             --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
@@ -44,9 +44,9 @@
         .db-input, input[type="text"] { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
         .net-item { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; font-family: monospace; }
 
-        /* Workspace (Fixed Layout) */
+        /* Workspace (Full Editor Mode) */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; background: #ccc; overflow: hidden; }
-        .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; height: 100%; min-height: 0; /* CRITICAL FIX */ }
+        .panes { display: grid; grid-template-columns: 1fr; gap: 1px; height: 100%; min-height: 0; }
         .editor-container { position: relative; background: var(--editor-bg); display: flex; overflow: hidden; }
         #line-numbers { width: 40px; background: var(--line-num-bg); color: var(--line-num-text); padding: 15px 5px; text-align: right; font-family: monospace; font-size: 13px; line-height: 1.6; user-select: none; }
         .editor-stack { flex: 1; position: relative; overflow: hidden; }
@@ -72,7 +72,7 @@
 <body>
 
 <header>
-    <div>Local IDE v9.0 (OPFS)</div>
+    <div>Local IDE v9.1 (OPFS)</div>
     <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
 </header>
 
@@ -81,7 +81,7 @@
     <button class="btn-red" id="wipeBtn" disabled>Wipe</button>
     <div style="width:1px; height:20px; background:#ddd; margin:0 5px;"></div>
     <button class="btn-demo" id="demoBtn" disabled>⚡ Load Demo</button>
-    <button class="btn-run" id="runBtn" disabled>▶ Run</button>
+    <button class="btn-run" id="runBtn" disabled>▶ Run in New Window</button>
     <button class="btn-warn" id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
@@ -144,17 +144,16 @@
                     <textarea id="editor" spellcheck="false" placeholder="Initialize OPFS to start..."></textarea>
                 </div>
             </div>
-            <iframe id="preview" style="width:100%; height:100%; border:none; background:white;"></iframe>
-        </div>
+            </div>
         <div id="console-container">
             <div class="c-toolbar" onclick="toggleConsole()">
-                <span>CONSOLE & AUDIT LOGS</span>
+                <span>CONSOLE & AUDIT LOGS (LINKED TO POPUP)</span>
                 <span>
                     <span id="mitigateBtn" style="color:var(--warn); margin-right:10px; display:none;" onclick="event.stopPropagation(); applyMitigation()">[ FIX VULN ]</span>
                     <span id="toggleIcon">▼</span>
                 </span>
             </div>
-            <div id="console">> IDE Ready. Layout Stable.</div>
+            <div id="console">> IDE Ready. Click 'Run' to open separate preview window.</div>
         </div>
     </div>
 </div>
@@ -162,6 +161,7 @@
 <script>
     let rootHandle, currentFileHandle;
     let draggedItem = null;
+    let runWindow = null;
     
     const editor = document.getElementById('editor');
     const hContent = document.getElementById('h-content');
@@ -209,40 +209,6 @@
             loadDB();
             log("OPFS Mounted.", "var(--success)");
         } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
-    };
-
-    // --- SEARCH & FILTER ---
-    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
-
-    document.getElementById('searchAllBtn').onclick = async () => {
-        const q = document.getElementById('searchAll').value.toLowerCase();
-        const res = document.getElementById('searchResults');
-        res.innerHTML = "<div>Scanning...</div>";
-        if(!q || !rootHandle) return;
-        
-        let found = 0;
-        async function scan(h, path="") {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await scan(e, path + e.name + "/");
-                else {
-                    const txt = await (await e.getFile()).text();
-                    const lines = txt.split('\n');
-                    lines.forEach((l, i) => {
-                        if(l.toLowerCase().includes(q)) {
-                            found++;
-                            const d = document.createElement('div');
-                            d.className = 'search-result';
-                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
-                            d.onclick = () => loadFile(e);
-                            if(found === 1) res.innerHTML = "";
-                            res.appendChild(d);
-                        }
-                    });
-                }
-            }
-        }
-        await scan(rootHandle);
-        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
     };
 
     // --- DRAG & DROP ENGINE ---
@@ -358,7 +324,40 @@
         log("Patched.", "var(--success)");
     }
 
-    // --- DB & RUN ---
+    // --- DB & SEARCH ---
+    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
+
+    document.getElementById('searchAllBtn').onclick = async () => {
+        const q = document.getElementById('searchAll').value.toLowerCase();
+        const res = document.getElementById('searchResults');
+        res.innerHTML = "<div>Scanning...</div>";
+        if(!q || !rootHandle) return;
+        
+        let found = 0;
+        async function scan(h, path="") {
+            for await (const e of h.values()) {
+                if(e.kind==='directory') await scan(e, path + e.name + "/");
+                else {
+                    const txt = await (await e.getFile()).text();
+                    const lines = txt.split('\n');
+                    lines.forEach((l, i) => {
+                        if(l.toLowerCase().includes(q)) {
+                            found++;
+                            const d = document.createElement('div');
+                            d.className = 'search-result';
+                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
+                            d.onclick = () => loadFile(e);
+                            if(found === 1) res.innerHTML = "";
+                            res.appendChild(d);
+                        }
+                    });
+                }
+            }
+        }
+        await scan(rootHandle);
+        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
+    };
+
     async function loadDB() {
         const list = document.getElementById('dbList');
         try {
@@ -382,9 +381,31 @@
         loadDB();
     };
 
+    // --- RUN IN NEW WINDOW ---
     document.getElementById('runBtn').onclick = () => {
-        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
-        document.getElementById('preview').src = URL.createObjectURL(new Blob([hook + sanitize(editor.value)], {type: 'text/html'}));
+        if(runWindow && !runWindow.closed) runWindow.close();
+        
+        const hook = `<script>
+            (function(){
+                const netLog=(d)=>window.opener.postMessage({type:'network',...d},'*');
+                const log=(m,a)=>window.opener.postMessage({type:'console',method:m,args:Array.from(a).map(String)},'*');
+                console.log=function(){log('log',arguments)};
+                console.error=function(){log('error',arguments)};
+                window.onerror=(m)=>log('error',[m]);
+                
+                const originalFetch=window.fetch;
+                window.fetch=async(...args)=>{
+                    const u=args[0]instanceof Request?args[0].url:args[0];
+                    const m=(args[1]&&args[1].method)||'GET';
+                    try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}
+                    catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}
+                }
+            })();
+        <\/script>`;
+        
+        const blob = new Blob([`<html><head><title>Run Preview</title></head><body>${hook}${sanitize(editor.value)}</body></html>`], {type: 'text/html'});
+        runWindow = window.open(URL.createObjectURL(blob), '_blank');
+        log("Opened in new window. Console logs linked.", "var(--primary)");
     };
 
     window.addEventListener('message', (e) => {
@@ -392,6 +413,9 @@
             const d = document.createElement('div'); d.className='net-item'; 
             d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
             document.getElementById('netList').prepend(d);
+        }
+        if(e.data.type === 'console') {
+            log(e.data.args.join(' '), e.data.method==='error'?'var(--danger)':null);
         }
     });
 
