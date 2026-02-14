@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.9: Fixed Tree & Unified Tools</title>
+    <title>IDE v10.0: Gemini Syntax Highlighting</title>
     <style>
         /* --- THEME & VARIABLES --- */
         :root {
@@ -10,16 +10,23 @@
             --header: #ffffff; --header-text: #1f1f1f;
             --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
-            --tag: #0b57d0; --attr: #b3261e; --str: #146c2e; --key: #8ab4f8; --comm: #747775;
+            
+            /* GEMINI SYNTAX COLORS (User Requested) */
+            --tag: #d93025;  /* Red */
+            --attr: #e37400; /* Orange/Brown for attributes */
+            --str: #188038;  /* Green */
+            --key: #a142f4;  /* Purple */
+            --obj: #1a73e8;  /* Blue (document, etc.) */
+            --comm: #747775; /* Gray */
         }
         body.midnight {
             --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
             --header: #000; --header-text: #0f0; --line-bg: #111; --line-text: #0f0;
-            --accent: #0f0; --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0; --comm: #006400;
+            --accent: #0f0; --tag: #ff5555; --attr: #f1fa8c; --str: #50fa7b; --key: #bd93f9; --obj: #8be9fd; --comm: #6272a4;
         }
 
         /* --- LAYOUT --- */
-        body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+        body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: 'Google Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
         header { 
             height: 45px; background: var(--header); border-bottom: 1px solid var(--border); 
@@ -35,7 +42,6 @@
 
         .sidebar { width: 340px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         
-        /* 4 Tabs (Search merged into Tools) */
         .tab-row { display: flex; background: rgba(0,0,0,0.05); }
         .tab { 
             flex: 1; padding: 10px 0; text-align: center; font-size: 10px; font-weight: bold; 
@@ -61,11 +67,22 @@
         /* Workspace */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; min-width: 0; background: var(--bg); }
         .editor-container { position: relative; display: flex; overflow: hidden; }
-        #line-numbers { width: 40px; background: var(--line-bg); color: var(--line-text); text-align: right; padding: 10px 5px; font-family: monospace; font-size: 13px; line-height: 1.5; border-right: 1px solid var(--border); user-select: none; }
+        #line-numbers { 
+            width: 40px; background: var(--line-bg); color: var(--line-text); text-align: right; 
+            padding: 10px 5px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; 
+            border-right: 1px solid var(--border); user-select: none; 
+        }
         .editor-stack { flex: 1; position: relative; min-width: 0; }
-        #editor, #highlighting { position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 10px; border: 0; font-family: monospace; font-size: 13px; line-height: 1.5; white-space: pre; box-sizing: border-box; }
+        
+        /* EDITOR LAYERS */
+        #editor, #highlighting { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 10px; border: 0; 
+            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; white-space: pre; 
+            box-sizing: border-box; 
+        }
         #editor { color: transparent; background: transparent; caret-color: var(--text); z-index: 2; overflow: scroll; resize: none; outline: none; }
         #highlighting { color: var(--text); z-index: 1; pointer-events: none; overflow: hidden; }
+        
         #console-container { height: 140px; background: #1e1e1e; color: #ccc; display: flex; flex-direction: column; transition: 0.2s; border-top: 2px solid var(--border); }
         .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
@@ -76,16 +93,21 @@
         .btn-d { background: var(--danger); color: #fff; border: none; }
         input[type="text"] { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; }
         
-        /* Syntax Colors */
-        .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } .t-str { color: var(--str); } .t-key { color: var(--key); font-weight: bold; }
+        /* SYNTAX HIGHLIGHTING CLASSES */
+        .t-tag { color: var(--tag); font-weight: 700; } 
+        .t-attr { color: var(--attr); } 
+        .t-str { color: var(--str); } 
+        .t-key { color: var(--key); font-weight: 600; }
+        .t-obj { color: var(--obj); font-weight: 600; } /* New class for document. */
+        .t-comm { color: var(--comm); font-style: italic; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="gemini">
 
 <header>
-    <div>IDE v9.9 <span style="opacity:0.5; font-weight:400;">(Unified Tools)</span></div>
+    <div>Gemini IDE v10.0 <span style="opacity:0.5; font-weight:400;">(Syntax Enhanced)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -121,11 +143,7 @@
                 <span onclick="loadDB()" style="cursor:pointer; color:var(--accent); font-size:10px;">REFRESH</span>
             </div>
             <div id="dbList" style="margin-bottom:15px; max-height:150px; overflow-y:auto; border:1px solid var(--border); padding:5px;"></div>
-            
-            <b style="font-size:11px;">ADD ENTRY</b>
-            <input type="text" id="dbTitle" class="db-input" placeholder="Title...">
-            <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
-            <button class="btn-p" style="width:100%; margin-top:5px;" id="addDbEntryBtn">Save Entry</button>
+            <button class="btn-p" style="width:100%; margin-top:5px;" id="addDbEntryBtn">Save Log</button>
         </div>
 
         <div id="netPane" class="pane">
@@ -134,18 +152,15 @@
         </div>
 
         <div id="toolsPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH (FIND ALL)</div>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
             <input type="text" id="searchAll" placeholder="Search in all files...">
             <button class="btn-p" style="width:100%" id="searchAllBtn">Search</button>
             <div id="searchResults" style="margin-top:10px; max-height:120px; overflow-y:auto; border:1px solid var(--border);"></div>
-            
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
-            
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
             <input type="text" id="gFind" placeholder="Find text...">
             <input type="text" id="gReplace" placeholder="Replace with...">
             <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
-            
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEME</div>
             <button onclick="document.body.className='gemini'" style="width:100%">Gemini Light</button>
@@ -192,11 +207,31 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
+    // --- GEMINI SYNTAX HIGHLIGHTING ENGINE ---
     const updateHigh = (text) => {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        // 1. Comments (Gray)
+        code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
+        
+        // 2. HTML Tags (Red - Requested)
         code = code.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
+        
+        // 3. Attributes (Orange/Standard)
         code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
+        
+        // 4. Strings (Green)
         code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
+        code = code.replace(/'(.*?)'/g, "<span class='t-str'>'$1'</span>");
+        
+        // 5. JS Keywords (Purple - Requested)
+        const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b";
+        code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
+        
+        // 6. Built-in Objects (Blue - Requested: document, window, console, fetch)
+        const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
+        code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
+
         hContent.innerHTML = code + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
     };
@@ -223,7 +258,7 @@
         } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- FILE TREE (FIXED RECURSION) ---
+    // --- FILE TREE ---
     async function buildTree(dirHandle, container) {
         container.innerHTML = "";
         const entries = [];
@@ -236,7 +271,7 @@
         }
 
         for (const e of entries) {
-            if(e.name === 'vuln_db.json') continue; // Hide DB
+            if(e.name === 'vuln_db.json') continue;
             
             const row = document.createElement('div');
             row.className = 'tree-row';
@@ -253,7 +288,7 @@
                     if (sub.style.display === 'none') {
                         sub.style.display = 'block';
                         icon.innerHTML = '▼';
-                        await buildTree(e, sub); // Recurse
+                        await buildTree(e, sub);
                     } else {
                         sub.style.display = 'none';
                         icon.innerHTML = '▶';
@@ -277,7 +312,7 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- DB FUNCTIONS ---
+    // --- DB & AUDIT ---
     async function loadDB() {
         try {
             const fh = await rootHandle.getFileHandle('vuln_db.json');
@@ -292,9 +327,37 @@
         } catch(e){ log("DB Load Error", "err"); }
     }
 
+    document.getElementById('auditBtn').onclick = async () => {
+        log("Scanning...", "warn");
+        const findings = [];
+        async function scan(dir) {
+            for await (const e of dir.values()) {
+                if(e.kind==='directory') await scan(e);
+                else {
+                    if(e.name === 'vuln_db.json') continue;
+                    const t = await (await e.getFile()).text();
+                    if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`Found in ${e.name}`});
+                    if(t.includes('http:')) findings.push({title:"Insecure HTTP", desc:`Found in ${e.name}`});
+                }
+            }
+        }
+        await scan(rootHandle);
+        
+        if(findings.length > 0) {
+            log(`Found ${findings.length} issues. Saving...`, "err");
+            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
+            const old = await (await fh.getFile()).text();
+            const db = old ? JSON.parse(old) : [];
+            const w = await fh.createWritable();
+            await w.write(JSON.stringify([...db, ...findings]));
+            await w.close();
+            loadDB();
+        } else { log("Clean scan.", "ok"); }
+    };
+
     document.getElementById('addDbEntryBtn').onclick = async () => {
-        const title = document.getElementById('dbTitle').value;
-        const desc = document.getElementById('dbDesc').value;
+        const title = prompt("Entry Title:");
+        const desc = prompt("Entry Description:");
         if(!title) return;
         const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
         const t = await (await fh.getFile()).text();
@@ -304,7 +367,7 @@
         loadDB();
     };
 
-    // --- SEARCH & REPLACE (UNIFIED) ---
+    // --- SEARCH ---
     document.getElementById('searchAllBtn').onclick = async () => {
         const q = document.getElementById('searchAll').value.toLowerCase();
         const res = document.getElementById('searchResults');
@@ -329,13 +392,6 @@
         if(res.children.length===0) res.innerHTML = "<div style='font-size:10px'>No matches.</div>";
     };
 
-    document.getElementById('gReplaceBtn').onclick = async () => {
-        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
-        if(!f) return;
-        async function run(dir) { for await (const e of dir.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
-        await run(rootHandle); log("Replaced.");
-    };
-
     // --- UTILS ---
     document.getElementById('runBtn').onclick = () => {
         const hook = `<script>
@@ -357,7 +413,8 @@
 
     window.addEventListener('message', (e) => {
         if(e.data.type === 'network') {
-            const d = document.createElement('div'); d.className='net-item'; d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`;
+            const d = document.createElement('div'); d.style.fontSize="11px"; d.style.borderBottom="1px solid #eee";
+            d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`;
             document.getElementById('netList').prepend(d);
         }
         if(e.data.type === 'console') log(e.data.msg);
@@ -367,37 +424,18 @@
         if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }
     };
     
-    document.getElementById('demoBtn').onclick = async () => {
-        const h = await rootHandle.getFileHandle('demo.html', {create:true});
-        const w = await h.createWritable(); await w.write('<h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script>'); await w.close();
-        await buildTree(rootHandle, document.getElementById('tree-root'));
-        log("Demo Created.", "ok");
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
+        if(!f) return;
+        async function run(dir) { for await (const e of dir.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
+        await run(rootHandle); log("Replaced.");
     };
 
-    document.getElementById('auditBtn').onclick = async () => {
-        log("Scanning...", "warn");
-        const findings = [];
-        async function scan(dir) {
-            for await (const e of dir.values()) {
-                if(e.kind==='directory') await scan(e);
-                else {
-                    if(e.name === 'vuln_db.json') continue;
-                    const t = await (await e.getFile()).text();
-                    if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`Found in ${e.name}`});
-                    if(t.includes('http:')) findings.push({title:"Insecure HTTP", desc:`Found in ${e.name}`});
-                }
-            }
-        }
-        await scan(rootHandle);
-        if(findings.length > 0) {
-            log(`Found ${findings.length} issues. Saving...`, "err");
-            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
-            const old = await (await fh.getFile()).text();
-            const db = old ? JSON.parse(old) : [];
-            const newDB = [...db, ...findings];
-            const w = await fh.createWritable(); await w.write(JSON.stringify(newDB)); await w.close();
-            loadDB();
-        } else { log("Clean scan.", "ok"); }
+    document.getElementById('demoBtn').onclick = async () => {
+        const h = await rootHandle.getFileHandle('demo.html', {create:true});
+        const w = await h.createWritable(); await w.write('<html><body><h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script></body></html>'); await w.close();
+        await buildTree(rootHandle, document.getElementById('tree-root'));
+        log("Demo Created.", "ok");
     };
 
     document.getElementById('backupBtn').onclick = async () => {
