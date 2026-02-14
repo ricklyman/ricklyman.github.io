@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v10.0: Gemini Syntax Highlighting</title>
+    <title>IDE v10.1: Collision Fix & Gemini Theme</title>
     <style>
         /* --- THEME & VARIABLES --- */
         :root {
@@ -11,12 +11,12 @@
             --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
             
-            /* GEMINI SYNTAX COLORS (User Requested) */
+            /* GEMINI SYNTAX COLORS */
             --tag: #d93025;  /* Red */
-            --attr: #e37400; /* Orange/Brown for attributes */
+            --attr: #e37400; /* Orange/Brown */
             --str: #188038;  /* Green */
             --key: #a142f4;  /* Purple */
-            --obj: #1a73e8;  /* Blue (document, etc.) */
+            --obj: #1a73e8;  /* Blue */
             --comm: #747775; /* Gray */
         }
         body.midnight {
@@ -98,7 +98,7 @@
         .t-attr { color: var(--attr); } 
         .t-str { color: var(--str); } 
         .t-key { color: var(--key); font-weight: 600; }
-        .t-obj { color: var(--obj); font-weight: 600; } /* New class for document. */
+        .t-obj { color: var(--obj); font-weight: 600; } 
         .t-comm { color: var(--comm); font-style: italic; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -107,7 +107,7 @@
 <body class="gemini">
 
 <header>
-    <div>Gemini IDE v10.0 <span style="opacity:0.5; font-weight:400;">(Syntax Enhanced)</span></div>
+    <div>Gemini IDE v10.1 <span style="opacity:0.5; font-weight:400;">(Fix: Keyword Collision)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -207,28 +207,28 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- GEMINI SYNTAX HIGHLIGHTING ENGINE ---
+    // --- SMART SYNTAX HIGHLIGHTING ENGINE ---
     const updateHigh = (text) => {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         
         // 1. Comments (Gray)
         code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
         
-        // 2. HTML Tags (Red - Requested)
+        // 2. HTML Tags (Red)
         code = code.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
         
-        // 3. Attributes (Orange/Standard)
+        // 3. Attributes (Orange)
         code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
         
         // 4. Strings (Green)
         code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
         code = code.replace(/'(.*?)'/g, "<span class='t-str'>'$1'</span>");
         
-        // 5. JS Keywords (Purple - Requested)
-        const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b";
+        // 5. JS Keywords (Purple) - NEGATIVE LOOKAHEAD ADDED to avoid "class="
+        const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b(?!=)";
         code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
         
-        // 6. Built-in Objects (Blue - Requested: document, window, console, fetch)
+        // 6. Built-in Objects (Blue)
         const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
         code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
 
