@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v8.7: Drag-Drop & Full Security Suite</title>
+    <title>IDE v8.8: Restored Search & Filter</title>
     <style>
         :root {
             --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
@@ -25,22 +25,24 @@
         .pane { display: none; flex: 1; flex-direction: column; padding: 12px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* Tree UI & Drag Styles */
+        /* Tree & Drag */
         .tree-root-node { font-weight: bold; color: var(--primary); margin-bottom: 5px; font-size: 11px; padding: 0 8px; }
         .tree-item { margin-left: 18px; border-left: 1px solid rgba(0,0,0,0.1); }
         .tree-row { display: flex; align-items: center; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; user-select: none; border: 1px solid transparent; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
         .tree-row.active { background: #e7f3ff; color: var(--primary); font-weight: 600; }
-        
-        /* Drag Targets */
         .drag-over { background: rgba(24, 119, 242, 0.1); border: 1px dashed var(--primary); }
         .folder-icon { margin-right: 6px; font-size: 10px; width: 12px; display: inline-block; transition: transform 0.1s; }
 
-        /* DB & Network Styles */
-        .db-entry { background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 4px; padding: 8px; margin-bottom: 8px; }
-        .db-input { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
-        .net-item { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; font-family: monospace; }
+        /* Search Results */
+        .search-result { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .search-result:hover { background: rgba(0,0,0,0.05); }
+        .match-line { color: var(--primary); font-weight: bold; margin-right: 5px; }
 
+        /* DB & Inputs */
+        .db-entry { background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+        .db-input, input[type="text"] { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
+        
         /* Workspace */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr 140px; background: #ccc; }
         .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; height: 100%; }
@@ -68,7 +70,7 @@
 <body>
 
 <header>
-    <div>Local IDE v8.7 (OPFS)</div>
+    <div>Local IDE v8.8 (OPFS)</div>
     <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
 </header>
 
@@ -95,15 +97,16 @@
         </div>
         
         <div id="explorerPane" class="pane active">
+            <input type="text" id="fileFilter" placeholder="Filter filenames..." style="margin-bottom:10px;">
             <div id="tree-root-header" class="tree-root-node"></div>
             <div id="tree-root"></div>
         </div>
 
         <div id="dbPane" class="pane">
             <div style="font-weight:bold; font-size:11px; margin-bottom:10px;">VULNERABILITY DB</div>
-            <input type="text" id="dbTitle" class="db-input" placeholder="Title...">
-            <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
-            <input type="text" id="dbMit" class="db-input" placeholder="Fix...">
+            <input type="text" id="dbTitle" placeholder="Title...">
+            <input type="text" id="dbDesc" placeholder="Description...">
+            <input type="text" id="dbMit" placeholder="Fix...">
             <button class="btn-blue" id="addDbEntryBtn" style="width:100%;">Add Entry</button>
             <div id="dbList" style="margin-top:10px; font-size:11px;"></div>
         </div>
@@ -114,10 +117,16 @@
         </div>
 
         <div id="toolsPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:10px;">GLOBAL REPLACE</div>
-            <input type="text" id="gFind" class="db-input" placeholder="Find text...">
-            <input type="text" id="gReplace" class="db-input" placeholder="Replace with...">
-            <button class="btn-blue" id="gReplaceBtn" style="width:100%;">Run Replace</button>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">PROJECT SEARCH</div>
+            <input type="text" id="searchAll" placeholder="Search in all files...">
+            <button class="btn-blue" id="searchAllBtn" style="width:100%; margin-bottom:10px;">Find All</button>
+            <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom:15px; border:1px solid #eee;"></div>
+
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
+            <input type="text" id="gFind" placeholder="Find text...">
+            <input type="text" id="gReplace" placeholder="Replace with...">
+            <button class="btn-blue" id="gReplaceBtn" style="width:100%;">Replace All</button>
+            
             <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
             <button onclick="setTheme('')" style="width:100%; margin-bottom:5px;">One Dark</button>
             <button onclick="setTheme('midnight')" style="width:100%; background:#000; color:#0f0;">Midnight</button>
@@ -140,7 +149,7 @@
                 CONSOLE & AUDIT LOGS
                 <span id="mitigateBtn" style="color:var(--warn); cursor:pointer; display:none;" onclick="applyMitigation()">[ FIX VULNERABILITIES ]</span>
             </div>
-            <div id="console">> IDE Ready. Drag & Drop + Security Suite Active.</div>
+            <div id="console">> IDE Ready. Drag & Drop + Search restored.</div>
         </div>
     </div>
 </div>
@@ -167,109 +176,117 @@
     }
     function setTheme(t) { document.body.className = t; }
 
-    // --- MAIN INIT ---
+    // --- INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
             document.getElementById('tree-root-header').textContent = `📁 OPFS://ROOT`;
             
-            // Allow Drop on Root
-            const rootHeader = document.getElementById('tree-root-header');
-            rootHeader.ondragover = (e) => { e.preventDefault(); rootHeader.style.background = '#e7f3ff'; };
-            rootHeader.ondragleave = () => { rootHeader.style.background = 'transparent'; };
-            rootHeader.ondrop = async (e) => {
-                e.preventDefault(); rootHeader.style.background = 'transparent';
-                if (!draggedItem || draggedItem.parent === rootHandle) return;
-                try {
-                    await moveEntry(draggedItem.name, draggedItem.parent, rootHandle, draggedItem.kind);
-                    await buildTree(rootHandle, document.getElementById('tree-root'));
-                    log("Moved to Root.", "var(--success)");
-                } catch(err) { log("Root move failed.", "var(--danger)"); }
+            // Root Drop Zone
+            const header = document.getElementById('tree-root-header');
+            header.ondragover = e => { e.preventDefault(); header.style.background = '#e7f3ff'; };
+            header.ondragleave = () => header.style.background = 'transparent';
+            header.ondrop = async e => {
+                e.preventDefault(); header.style.background = 'transparent';
+                if(!draggedItem || draggedItem.parent === rootHandle) return;
+                try { await moveEntry(draggedItem.name, draggedItem.parent, rootHandle, draggedItem.kind); await buildTree(rootHandle, document.getElementById('tree-root')); }
+                catch(err){ log("Move failed.", "var(--danger)"); }
             };
 
             await buildTree(rootHandle, document.getElementById('tree-root'));
-            enableControls();
+            ['newFileBtn','newFolderBtn','backupBtn','wipeBtn','saveBtn','runBtn','demoBtn','auditBtn'].forEach(i=>document.getElementById(i).disabled=false);
             loadDB();
-            log("OPFS Mounted & DB Loaded.", "var(--success)");
+            log("OPFS Mounted.", "var(--success)");
         } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
     };
 
-    function enableControls() {
-        ['newFileBtn','newFolderBtn','backupBtn','wipeBtn','saveBtn','runBtn','demoBtn','auditBtn'].forEach(i=>document.getElementById(i).disabled=false);
-    }
+    // --- SEARCH & FILTER ---
+    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
+
+    document.getElementById('searchAllBtn').onclick = async () => {
+        const q = document.getElementById('searchAll').value.toLowerCase();
+        const res = document.getElementById('searchResults');
+        res.innerHTML = "";
+        if(!q || !rootHandle) return;
+        
+        async function scan(h, path="") {
+            for await (const e of h.values()) {
+                if(e.kind==='directory') await scan(e, path + e.name + "/");
+                else {
+                    const txt = await (await e.getFile()).text();
+                    const lines = txt.split('\n');
+                    lines.forEach((l, i) => {
+                        if(l.toLowerCase().includes(q)) {
+                            const d = document.createElement('div');
+                            d.className = 'search-result';
+                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
+                            d.onclick = () => loadFile(e);
+                            res.appendChild(d);
+                        }
+                    });
+                }
+            }
+        }
+        res.innerHTML = "<div>Searching...</div>";
+        await scan(rootHandle);
+        if(res.children.length === 1) res.innerHTML = "<div>No matches found.</div>";
+    };
 
     // --- DRAG & DROP ENGINE ---
-    async function moveEntry(name, sourceDir, destDir, kind) {
-        if (kind === 'file') {
-            const fileHandle = await sourceDir.getFileHandle(name);
-            const file = await fileHandle.getFile();
-            const newHandle = await destDir.getFileHandle(name, { create: true });
-            const writable = await newHandle.createWritable();
-            await writable.write(file);
-            await writable.close();
-            await sourceDir.removeEntry(name);
-        } else if (kind === 'directory') {
-            const dirHandle = await sourceDir.getDirectoryHandle(name);
-            const newDirHandle = await destDir.getDirectoryHandle(name, { create: true });
-            for await (const entry of dirHandle.values()) {
-                await moveEntry(entry.name, dirHandle, newDirHandle, entry.kind);
-            }
-            await sourceDir.removeEntry(name, { recursive: true });
+    async function moveEntry(name, src, dest, kind) {
+        if(kind==='file') {
+            const f = await (await src.getFileHandle(name)).getFile();
+            const w = await (await dest.getFileHandle(name, {create:true})).createWritable();
+            await w.write(f); await w.close(); await src.removeEntry(name);
+        } else {
+            const dSub = await src.getDirectoryHandle(name);
+            const nSub = await dest.getDirectoryHandle(name, {create:true});
+            for await (const e of dSub.values()) await moveEntry(e.name, dSub, nSub, e.kind);
+            await src.removeEntry(name, {recursive:true});
         }
     }
 
-    async function buildTree(handle, container) {
+    async function buildTree(handle, container, filter = "") {
         container.innerHTML = "";
         const entries = []; for await (const e of handle.values()) entries.push(e);
         entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
         
-        if(entries.length === 0) {
-            container.innerHTML = `<div style="font-size:10px; color:#999; padding-left:20px;">(empty)</div>`;
-            return;
-        }
+        if(entries.length === 0) { container.innerHTML = `<div style="font-size:10px; color:#999; padding-left:20px;">(empty)</div>`; return; }
 
         for (const entry of entries) {
+            if(filter && entry.kind==='file' && !entry.name.toLowerCase().includes(filter.toLowerCase())) continue;
+
             const row = document.createElement('div');
             row.className = `tree-row ${currentFileHandle?.name === entry.name ? 'active' : ''}`;
-            
             row.draggable = true;
-            row.ondragstart = (e) => {
-                e.stopPropagation();
-                draggedItem = { name: entry.name, kind: entry.kind, parent: handle };
-            };
+            row.ondragstart = e => { e.stopPropagation(); draggedItem = {name:entry.name, kind:entry.kind, parent:handle}; };
 
             if (entry.kind === 'directory') {
                 row.innerHTML = `<span class="folder-icon">▶</span> 📁 ${entry.name}`;
-                row.ondragover = (e) => { e.preventDefault(); e.stopPropagation(); row.classList.add('drag-over'); };
-                row.ondragleave = (e) => { e.stopPropagation(); row.classList.remove('drag-over'); };
-                row.ondrop = async (e) => {
+                row.ondragover = e => { e.preventDefault(); e.stopPropagation(); row.classList.add('drag-over'); };
+                row.ondragleave = e => { e.stopPropagation(); row.classList.remove('drag-over'); };
+                row.ondrop = async e => {
                     e.preventDefault(); e.stopPropagation(); row.classList.remove('drag-over');
-                    if (!draggedItem) return;
+                    if(!draggedItem) return;
                     try {
-                        const destDir = await handle.getDirectoryHandle(entry.name);
-                        await moveEntry(draggedItem.name, draggedItem.parent, destDir, draggedItem.kind);
+                        const dest = await handle.getDirectoryHandle(entry.name);
+                        await moveEntry(draggedItem.name, draggedItem.parent, dest, draggedItem.kind);
                         await buildTree(rootHandle, document.getElementById('tree-root'));
-                        log("Move successful.", "var(--success)");
-                    } catch (err) { log("Move failed.", "var(--danger)"); }
+                    } catch(err){ log("Move failed.", "var(--danger)"); }
                 };
 
-                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = 'none';
-                row.onclick = (e) => {
+                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = filter ? 'block' : 'none';
+                row.onclick = e => {
                     e.stopPropagation();
                     const icon = row.querySelector('.folder-icon');
-                    if (sub.style.display === 'none') {
-                        sub.style.display = 'block';
-                        icon.style.transform = 'rotate(90deg)';
-                        buildTree(entry, sub);
-                    } else {
-                        sub.style.display = 'none';
-                        icon.style.transform = 'rotate(0deg)';
-                    }
+                    if(sub.style.display==='none'){ sub.style.display='block'; icon.style.transform='rotate(90deg)'; buildTree(entry, sub, filter); }
+                    else { sub.style.display='none'; icon.style.transform='rotate(0deg)'; }
                 };
                 container.appendChild(row); container.appendChild(sub);
+                if(filter) buildTree(entry, sub, filter);
             } else {
                 row.innerHTML = `📄 ${entry.name}`;
-                row.onclick = (e) => { e.stopPropagation(); loadFile(entry); };
+                row.onclick = e => { e.stopPropagation(); loadFile(entry); };
                 container.appendChild(row);
             }
         }
@@ -283,85 +300,7 @@
         lineNumbers.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>');
     }
 
-    // --- SECURITY & DEMO ---
-    document.getElementById('demoBtn').onclick = async () => {
-        const name = "vulnerable_demo.html";
-        const content = `<!DOCTYPE html><html><body><h1>XSS Test</h1><div id="out"></div><script>
-        const url="http://unsafe.com"; document.getElementById('out').innerHTML="Link: "+url; fetch(url);
-        <\/script></body></html>`;
-        try {
-            const h = await rootHandle.getFileHandle(name, {create:true});
-            const w = await h.createWritable(); await w.write(content); await w.close();
-            log("Demo created.", "var(--success)");
-            await buildTree(rootHandle, document.getElementById('tree-root'));
-        } catch(e) { log("Error: "+e.message, "var(--danger)"); }
-    };
-
-    let auditFindings = [];
-    document.getElementById('auditBtn').onclick = async () => {
-        log("Scanning...", "var(--warn)");
-        auditFindings = [];
-        const patterns = [{n:"XSS",r:/\.innerHTML\s*=/},{n:"HTTP",r:/http:\/\//}];
-        async function scan(h) {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await scan(e);
-                else {
-                    const t = await (await e.getFile()).text();
-                    patterns.forEach(p => { if(p.r.test(t)) { auditFindings.push(p); log(`[!] ${p.n} in ${e.name}`, "var(--warn)"); } });
-                }
-            }
-        }
-        await scan(rootHandle);
-        if(auditFindings.length>0) document.getElementById('mitigateBtn').style.display='inline';
-    };
-
-    function applyMitigation() {
-        let t = editor.value;
-        t = t.replace(/\.innerHTML\s*=/g, ".textContent =").replace(/http:\/\//g, "https://");
-        editor.value = t;
-        hContent.innerHTML = applyHighlight(t) + "\n";
-        log("Applied patches.", "var(--success)");
-    }
-
-    // --- DB & NETWORK ---
-    async function loadDB() {
-        const list = document.getElementById('dbList');
-        try {
-            const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-            const t = await (await h.getFile()).text();
-            const data = t ? JSON.parse(t) : [];
-            list.innerHTML = "";
-            data.forEach(e => list.innerHTML += `<div class="db-entry"><b>${e.title}</b><br>${e.desc}</div>`);
-        } catch(e) { list.innerHTML = "DB Empty"; }
-    }
-
-    document.getElementById('addDbEntryBtn').onclick = async () => {
-        const title = document.getElementById('dbTitle').value;
-        const desc = document.getElementById('dbDesc').value;
-        if(!title) return;
-        const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-        const t = await (await h.getFile()).text();
-        const data = t ? JSON.parse(t) : [];
-        data.push({title, desc, mit: document.getElementById('dbMit').value});
-        const w = await h.createWritable(); await w.write(JSON.stringify(data)); await w.close();
-        loadDB();
-    };
-
-    document.getElementById('runBtn').onclick = () => {
-        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
-        const blob = new Blob([`<html><body>${hook}${sanitize(editor.value)}</body></html>`], {type: 'text/html'});
-        document.getElementById('preview').src = URL.createObjectURL(blob);
-    };
-
-    window.addEventListener('message', (e) => {
-        if(e.data.type === 'network') {
-            const d = document.createElement('div'); d.className='net-item'; 
-            d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
-            document.getElementById('netList').prepend(d);
-        }
-    });
-
-    // --- UTILS ---
+    // --- FEATURES ---
     function sanitize(text) { return text.replace(/<span class="t-[a-z]+">/gi, "").replace(/<\/span>/gi, "").replace(/##[A-Z_]+##/g, ""); }
     function applyHighlight(text) {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -375,45 +314,95 @@
                    .replace(/##K_S##/g, '<span class="t-key">').replace(/##K_E##/g, '</span>');
     }
 
-    document.getElementById('saveBtn').onclick = async () => {
-        const w = await currentFileHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.");
+    document.getElementById('demoBtn').onclick = async () => {
+        const name = "vulnerable_demo.html";
+        const content = `<!DOCTYPE html><html><body><h1>XSS Test</h1><div id="out"></div><script>
+        const url="http://unsafe.com"; document.getElementById('out').innerHTML="Link: "+url; fetch(url);
+        <\/script></body></html>`;
+        try { const h = await rootHandle.getFileHandle(name, {create:true}); const w = await h.createWritable(); await w.write(content); await w.close(); log("Demo created.", "var(--success)"); await buildTree(rootHandle, document.getElementById('tree-root')); } catch(e){}
     };
-    document.getElementById('newFileBtn').onclick = async () => {
-        const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }
-    };
-    document.getElementById('newFolderBtn').onclick = async () => {
-        const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }
-    };
-    document.getElementById('gReplaceBtn').onclick = async () => {
-        const f = document.getElementById('gFind').value;
-        const r = document.getElementById('gReplace').value;
-        if(!f) return;
-        async function run(h) {
+
+    document.getElementById('auditBtn').onclick = async () => {
+        log("Scanning...", "var(--warn)");
+        let findings = false;
+        async function scan(h) {
             for await (const e of h.values()) {
-                if(e.kind==='directory') await run(e);
+                if(e.kind==='directory') await scan(e);
                 else {
-                    let t = await (await e.getFile()).text();
-                    if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }
+                    const t = await (await e.getFile()).text();
+                    if(/\.innerHTML\s*=/.test(t)) { findings=true; log(`[XSS] in ${e.name}`, "var(--warn)"); }
                 }
             }
         }
+        await scan(rootHandle);
+        if(findings) document.getElementById('mitigateBtn').style.display='inline';
+        else log("No issues.", "var(--success)");
+    };
+
+    function applyMitigation() {
+        editor.value = editor.value.replace(/\.innerHTML\s*=/g, ".textContent =").replace(/http:\/\//g, "https://");
+        hContent.innerHTML = applyHighlight(editor.value) + "\n";
+        log("Patched.", "var(--success)");
+    }
+
+    // --- DB & RUN ---
+    async function loadDB() {
+        const list = document.getElementById('dbList');
+        try {
+            const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
+            const t = await (await h.getFile()).text();
+            const data = t ? JSON.parse(t) : [];
+            list.innerHTML = "";
+            data.forEach(e => list.innerHTML += `<div class="db-entry"><b>${e.title}</b><br>${e.desc}</div>`);
+        } catch(e) {}
+    }
+
+    document.getElementById('addDbEntryBtn').onclick = async () => {
+        const title = document.getElementById('dbTitle').value;
+        const desc = document.getElementById('dbDesc').value;
+        if(!title) return;
+        const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
+        const t = await (await h.getFile()).text();
+        const data = t ? JSON.parse(t) : [];
+        data.push({title, desc});
+        const w = await h.createWritable(); await w.write(JSON.stringify(data)); await w.close();
+        loadDB();
+    };
+
+    document.getElementById('runBtn').onclick = () => {
+        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
+        document.getElementById('preview').src = URL.createObjectURL(new Blob([hook + sanitize(editor.value)], {type: 'text/html'}));
+    };
+
+    window.addEventListener('message', (e) => {
+        if(e.data.type === 'network') {
+            const d = document.createElement('div'); d.className='net-item'; 
+            d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
+            document.getElementById('netList').prepend(d);
+        }
+    });
+
+    document.getElementById('saveBtn').onclick = async () => {
+        const w = await currentFileHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.");
+    };
+    
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
+        if(!f || !rootHandle) return;
+        async function run(h) { for await (const e of h.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
         await run(rootHandle); log("Replaced.");
     };
+
     document.getElementById('backupBtn').onclick = async () => {
         const zip = new JSZip();
-        async function walk(h, folder) {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await walk(e, folder.folder(e.name));
-                else folder.file(e.name, await e.getFile());
-            }
-        }
+        async function walk(h, folder) { for await (const e of h.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
         await walk(rootHandle, zip);
-        const blob = await zip.generateAsync({type: "blob"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "opfs_project.zip"; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
     };
-    document.getElementById('wipeBtn').onclick = async () => {
-        if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }
-    };
+
+    document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
+    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }};
 
     editor.oninput = () => { hContent.innerHTML = applyHighlight(editor.value) + "\n"; };
     editor.onscroll = () => { lineNumbers.scrollTop = editor.scrollTop; document.getElementById('highlighting').scrollTop = editor.scrollTop; };
