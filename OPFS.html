@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v10.1: Collision Fix & Gemini Theme</title>
+    <title>IDE v10.2: Syntax Fix & DB Restore</title>
     <style>
         /* --- THEME & VARIABLES --- */
         :root {
@@ -91,7 +91,9 @@
         button { padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; }
         .btn-p { background: var(--accent); color: #fff; border: none; }
         .btn-d { background: var(--danger); color: #fff; border: none; }
-        input[type="text"] { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; }
+        
+        /* NEW: Standard Input Style */
+        .pane-input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; font-size: 12px; }
         
         /* SYNTAX HIGHLIGHTING CLASSES */
         .t-tag { color: var(--tag); font-weight: 700; } 
@@ -107,7 +109,7 @@
 <body class="gemini">
 
 <header>
-    <div>Gemini IDE v10.1 <span style="opacity:0.5; font-weight:400;">(Fix: Keyword Collision)</span></div>
+    <div>IDE v10.2 <span style="opacity:0.5; font-weight:400;">(Fix: DB Inputs & Syntax)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -143,6 +145,12 @@
                 <span onclick="loadDB()" style="cursor:pointer; color:var(--accent); font-size:10px;">REFRESH</span>
             </div>
             <div id="dbList" style="margin-bottom:15px; max-height:150px; overflow-y:auto; border:1px solid var(--border); padding:5px;"></div>
+            
+            <hr style="border:0; border-top:1px solid var(--border); margin: 10px 0;">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">ADD NEW ENTRY</div>
+            <input type="text" id="dbTitle" class="pane-input" placeholder="Title (e.g. XSS)">
+            <input type="text" id="dbDesc" class="pane-input" placeholder="Description...">
+            <input type="text" id="dbMit" class="pane-input" placeholder="Fix/Mitigation...">
             <button class="btn-p" style="width:100%; margin-top:5px;" id="addDbEntryBtn">Save Log</button>
         </div>
 
@@ -153,13 +161,13 @@
 
         <div id="toolsPane" class="pane">
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
-            <input type="text" id="searchAll" placeholder="Search in all files...">
+            <input type="text" id="searchAll" class="pane-input" placeholder="Search in all files...">
             <button class="btn-p" style="width:100%" id="searchAllBtn">Search</button>
             <div id="searchResults" style="margin-top:10px; max-height:120px; overflow-y:auto; border:1px solid var(--border);"></div>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
-            <input type="text" id="gFind" placeholder="Find text...">
-            <input type="text" id="gReplace" placeholder="Replace with...">
+            <input type="text" id="gFind" class="pane-input" placeholder="Find text...">
+            <input type="text" id="gReplace" class="pane-input" placeholder="Replace with...">
             <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEME</div>
@@ -207,28 +215,29 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- SMART SYNTAX HIGHLIGHTING ENGINE ---
+    // --- SAFE SYNTAX HIGHLIGHTING ---
     const updateHigh = (text) => {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         
-        // 1. Comments (Gray)
+        // 1. Comments
         code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
         
-        // 2. HTML Tags (Red)
+        // 2. HTML Tags
         code = code.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
         
-        // 3. Attributes (Orange)
+        // 3. Attributes (Safe match)
         code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
         
-        // 4. Strings (Green)
+        // 4. Strings
         code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
         code = code.replace(/'(.*?)'/g, "<span class='t-str'>'$1'</span>");
         
-        // 5. JS Keywords (Purple) - NEGATIVE LOOKAHEAD ADDED to avoid "class="
-        const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b(?!=)";
+        // 5. JS Keywords (FIXED: Lookahead for space or brace, NOT equals)
+        // Only matches "class" if followed by space or brace. Ignores "class="
+        const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b(?=[\\s{])";
         code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
         
-        // 6. Built-in Objects (Blue)
+        // 6. Built-in Objects
         const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
         code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
 
@@ -356,8 +365,8 @@
     };
 
     document.getElementById('addDbEntryBtn').onclick = async () => {
-        const title = prompt("Entry Title:");
-        const desc = prompt("Entry Description:");
+        const title = document.getElementById('dbTitle').value;
+        const desc = document.getElementById('dbDesc').value;
         if(!title) return;
         const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
         const t = await (await fh.getFile()).text();
@@ -365,6 +374,7 @@
         data.push({title, desc});
         const w = await fh.createWritable(); await w.write(JSON.stringify(data)); await w.close();
         loadDB();
+        log("Entry saved.", "ok");
     };
 
     // --- SEARCH ---
