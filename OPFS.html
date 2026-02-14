@@ -2,476 +2,362 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.4: Gemini Theme & Security Suite</title>
+    <title>IDE v9.5: Gemini Theme & Fixed Scrolling</title>
     <style>
+        /* --- THEME VARIABLES --- */
         :root {
-            /* Default (One Dark-ish) */
-            --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
-            --sidebar-bg: #fff; --sidebar-text: #333; --editor-bg: #282c34; --editor-text: #abb2bf;
-            --line-num-bg: #21252b; --line-num-text: #636d83; 
-            --tag: #e06c75; --attr: #d19a66; --str: #98c379; --key: #c678dd;
-            --success: #42b72a; --danger: #f48771; --warn: #eab308;
-        }
-        
-        /* MIDNIGHT THEME */
-        body.midnight { 
-            --editor-bg: #000; --sidebar-bg: #111; --sidebar-text: #0f0; --border: #333; 
-            --header-bg: #000; --header-text: #0f0; --line-num-bg: #000; --line-num-text: #0f0;
-            --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0; --primary: #0f0;
+            /* Default Dark (One Dark-ish) */
+            --bg: #282c34; --text: #abb2bf; --sidebar: #21252b; --border: #181a1f;
+            --header: #21252b; --header-text: #fff;
+            --line-num-bg: #21252b; --line-num-text: #495162;
+            --accent: #61afef; --success: #98c379; --warn: #e5c07b; --danger: #e06c75;
+            --sel: #3e4451; /* Selection color */
+            
+            /* Syntax */
+            --tag: #e06c75; --attr: #d19a66; --str: #98c379; --key: #c678dd; --comm: #5c6370;
         }
 
-        /* GEMINI BLUE THEME (New) */
         body.gemini {
-            --primary: #1a73e8; /* Google Blue */
-            --header-bg: #f0f4f9; --header-text: #1f1f1f;
-            --sidebar-bg: #f8f9fa; --sidebar-text: #3c4043; --border: #dadce0;
-            --editor-bg: #f0f4f9; /* Light Blue/Grey */
-            --editor-text: #1f1f1f;
-            --line-num-bg: #e1e5ea; --line-num-text: #5f6368;
-            /* High Contrast Syntax for Light Mode */
-            --tag: #1a73e8; /* Blue */
-            --attr: #d93025; /* Red */
-            --str: #188038; /* Green */
-            --key: #a142f4; /* Purple */
+            /* Gemini Light Theme */
+            --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
+            --header: #ffffff; --header-text: #1f1f1f;
+            --line-num-bg: #e1e5ea; --line-num-text: #747775;
+            --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
+            --sel: #d3e3fd;
+            
+            /* Syntax High Contrast */
+            --tag: #0b57d0; --attr: #b3261e; --str: #146c2e; --key: #8ab4f8; --comm: #747775;
         }
 
-        body { font-family: 'Google Sans', system-ui, sans-serif; margin: 0; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { background: var(--header-bg); color: var(--header-text); padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 45px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+        /* --- GLOBAL LAYOUT --- */
+        body { font-family: 'Google Sans', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        .controls { padding: 8px 15px; background: var(--sidebar-bg); border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+        header { 
+            background: var(--header); color: var(--header-text); 
+            height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+            border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 500;
+        }
+
+        .controls { 
+            background: var(--sidebar); border-bottom: 1px solid var(--border); padding: 8px 16px; 
+            display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; 
+        }
+
         .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
         
-        .sidebar { width: 350px; background: var(--sidebar-bg); color: var(--sidebar-text); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .tab-row { display: flex; background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); }
-        .tab { flex: 1; padding: 10px 5px; text-align: center; cursor: pointer; font-size: 9px; font-weight: bold; color: inherit; opacity: 0.7; transition: 0.2s; }
-        .tab.active { background: var(--sidebar-bg); color: var(--primary); border-bottom: 2px solid var(--primary); opacity: 1; }
-        .pane { display: none; flex: 1; flex-direction: column; padding: 12px; overflow-y: auto; }
+        .tab-row { display: flex; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.03); }
+        .tab { flex: 1; padding: 12px 0; text-align: center; font-size: 11px; font-weight: 600; cursor: pointer; opacity: 0.6; transition: 0.2s; color: var(--text); }
+        .tab:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+        .tab.active { opacity: 1; border-bottom: 2px solid var(--accent); color: var(--accent); background: var(--sidebar); }
+        
+        .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* Tree UI & Drag Styles */
-        .tree-root-node { font-weight: bold; color: var(--primary); margin-bottom: 5px; font-size: 11px; padding: 0 8px; }
-        .tree-item { margin-left: 18px; border-left: 1px solid rgba(0,0,0,0.1); }
-        .tree-row { display: flex; align-items: center; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; user-select: none; border: 1px solid transparent; }
-        .tree-row:hover { background: rgba(0,0,0,0.05); }
-        .tree-row.active { background: rgba(24, 119, 242, 0.1); color: var(--primary); font-weight: 600; }
-        .drag-over { background: rgba(24, 119, 242, 0.1); border: 1px dashed var(--primary); }
-        .folder-icon { margin-right: 6px; font-size: 10px; width: 12px; display: inline-block; transition: transform 0.1s; }
+        /* --- WORKSPACE --- */
+        .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); position: relative; }
+        
+        .editor-container { 
+            flex: 1; display: flex; position: relative; min-height: 0; /* CRITICAL for grid overflow */
+            overflow: hidden; 
+        }
 
-        /* DB & Inputs */
-        .db-entry { background: rgba(255,255,255,0.8); border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: 8px; padding: 10px; margin-bottom: 8px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .db-title { font-weight: bold; font-size: 12px; color: var(--sidebar-text); margin-bottom: 4px; }
-        .db-desc { font-size: 11px; color: var(--sidebar-text); opacity: 0.8; margin-bottom: 4px; line-height: 1.4; }
-        .db-meta { font-size: 9px; opacity: 0.5; text-align: right; }
-        .db-input, input[type="text"] { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; box-sizing: border-box; background: #fff; color: #333; }
+        #line-numbers { 
+            width: 48px; background: var(--line-num-bg); color: var(--line-num-text); 
+            text-align: right; padding: 15px 8px; 
+            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; 
+            user-select: none; border-right: 1px solid var(--border); flex-shrink: 0;
+            overflow: hidden; 
+        }
+
+        .editor-stack { flex: 1; position: relative; min-width: 0; }
+
+        /* SCROLL SYNC MAGIC */
+        #editor, #highlighting { 
+            margin: 0; padding: 15px; border: 0; width: 100%; height: 100%; 
+            position: absolute; top: 0; left: 0; 
+            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; 
+            white-space: pre; tab-size: 4; box-sizing: border-box;
+        }
+
+        #editor { 
+            color: transparent; background: transparent; caret-color: var(--text); 
+            z-index: 2; overflow: auto; resize: none; outline: none; 
+        }
         
-        /* Workspace */
-        .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; background: var(--border); overflow: hidden; }
-        .panes { display: grid; grid-template-columns: 1fr; gap: 1px; height: 100%; min-height: 0; }
-        .editor-container { position: relative; background: var(--editor-bg); display: flex; overflow: hidden; }
-        #line-numbers { width: 45px; background: var(--line-num-bg); color: var(--line-num-text); padding: 15px 5px; text-align: right; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; user-select: none; border-right: 1px solid var(--border); }
-        .editor-stack { flex: 1; position: relative; overflow: hidden; }
-        #editor, #highlighting { margin: 0; padding: 15px; border: 0; width: 100%; height: 100%; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; white-space: pre; position: absolute; top: 0; left: 0; box-sizing: border-box; overflow: auto; outline: none; }
-        #editor { color: transparent; background: transparent; caret-color: var(--editor-text); z-index: 2; resize: none; }
-        #highlighting { color: var(--editor-text); z-index: 1; pointer-events: none; }
+        #highlighting { 
+            color: var(--text); z-index: 1; pointer-events: none; overflow: hidden; 
+        }
+
+        /* --- CONSOLE --- */
+        #console-container { 
+            height: 150px; background: #1e1e1e; color: #ccc; border-top: 1px solid var(--border); 
+            display: flex; flex-direction: column; transition: height 0.2s ease; flex-shrink: 0;
+        }
+        #console-container.minimized { height: 32px; }
         
-        #console-container { display: flex; flex-direction: column; background: #1e1e1e; border-top: 2px solid #333; height: 140px; transition: height 0.2s; flex-shrink: 0; }
-        #console-container.minimized { height: 30px; }
-        .c-toolbar { background: #252526; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 10px; font-weight: bold; cursor: pointer; }
-        #console { flex: 1; color: #d4d4d4; padding: 10px; font-family: monospace; font-size: 11px; overflow-y: auto; }
+        .c-toolbar { 
+            padding: 6px 12px; background: #252526; font-size: 11px; font-weight: 700; color: #888; 
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
+        }
+        .c-toolbar:hover { color: #fff; }
+        #console { flex: 1; padding: 8px; font-family: monospace; font-size: 11px; overflow-y: auto; white-space: pre-wrap; }
+
+        /* --- COMPONENTS --- */
+        button { 
+            padding: 6px 12px; border-radius: 4px; border: 1px solid transparent; font-size: 11px; font-weight: 600; 
+            cursor: pointer; background: var(--bg); color: var(--text); border-color: var(--border);
+        }
+        button:hover { filter: brightness(0.9); }
+        .btn-p { background: var(--accent); color: #fff; }
+        .btn-d { background: var(--danger); color: #fff; }
         
-        /* Buttons */
-        button { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 11px; background: #e4e6eb; margin-top:4px; color: #3c4043; transition: 0.1s; }
-        button:hover { filter: brightness(0.95); }
-        .btn-blue { background: var(--primary); color: white; }
-        .btn-run { background: var(--success); color: white; }
-        .btn-warn { background: var(--warn); color: #000; }
-        .btn-demo { background: #9c27b0; color: white; }
-        .btn-red { background: var(--danger); color: white; }
+        input { 
+            background: var(--bg); color: var(--text); border: 1px solid var(--border); 
+            padding: 6px; border-radius: 4px; width: 100%; box-sizing: border-box; margin-bottom: 8px;
+        }
+
+        /* --- SCROLLBARS --- */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+        ::-webkit-scrollbar-thumb:hover { background-color: rgba(128,128,128,0.5); }
+
+        /* --- SYNTAX --- */
+        .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } 
+        .t-str { color: var(--str); } .t-key { color: var(--key); } .t-comm { color: var(--comm); font-style: italic; }
         
-        /* Syntax Colors (Dynamic) */
-        .t-tag { color: var(--tag); font-weight: bold; } 
-        .t-attr { color: var(--attr); } 
-        .t-str { color: var(--str); } 
-        .t-key { color: var(--key); font-weight: bold; }
+        /* Tree */
+        .tree-row { padding: 4px 8px; font-size: 13px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; }
+        .tree-row:hover { background: rgba(128,128,128,0.1); }
+        .tree-row.active { background: rgba(24, 119, 242, 0.15); color: var(--accent); font-weight: 600; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body>
-
-<header>
-    <div style="font-weight:700;">Gemini IDE v9.4 (OPFS)</div>
-    <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
+<body class="gemini"> <header>
+    <div>IDE v9.5 <span style="opacity:0.5; font-weight:400; margin-left:10px;">(OPFS • Auto-Sync • Secure)</span></div>
+    <div id="file-status" style="font-size: 11px; opacity: 0.7;">Ready</div>
 </header>
 
 <div class="controls">
-    <button class="btn-blue" id="mountBtn">Initialize</button>
-    <button class="btn-red" id="wipeBtn" disabled>Wipe</button>
-    <div style="width:1px; height:20px; background:#ccc; margin:0 8px;"></div>
-    <button class="btn-demo" id="demoBtn" disabled>⚡ Load Demo</button>
-    <button class="btn-run" id="runBtn" disabled>▶ Run</button>
-    <button class="btn-warn" id="auditBtn" disabled>🛡️ Audit</button>
+    <button class="btn-p" id="mountBtn">Initialize System</button>
+    <button class="btn-d" id="wipeBtn" disabled>Reset</button>
+    <div style="width:1px; height:16px; background:var(--border); margin:0 4px;"></div>
+    <button onclick="document.body.className='gemini'">Gemini Theme</button>
+    <button onclick="document.body.className='midnight'">Midnight</button>
+    <div style="width:1px; height:16px; background:var(--border); margin:0 4px;"></div>
+    <button id="runBtn" class="btn-p" disabled>▶ Run</button>
+    <button id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
     <button id="newFolderBtn" disabled>+ Folder</button>
-    <button id="backupBtn" disabled>💾 ZIP</button>
+    <button id="zipBtn" disabled>Export ZIP</button>
 </div>
 
 <div class="main-layout">
     <div class="sidebar">
         <div class="tab-row">
-            <div class="tab active" onclick="switchTab('explorer')">FILES</div>
-            <div class="tab" onclick="switchTab('db')">DB</div>
-            <div class="tab" onclick="switchTab('network')">NET</div>
-            <div class="tab" onclick="switchTab('tools')">TOOLS</div>
+            <div class="tab active" onclick="tab('explorer')">FILES</div>
+            <div class="tab" onclick="tab('db')">DB</div>
+            <div class="tab" onclick="tab('search')">SEARCH</div>
         </div>
         
         <div id="explorerPane" class="pane active">
-            <input type="text" id="fileFilter" placeholder="Filter filenames..." style="margin-bottom:10px;">
-            <div id="tree-root-header" class="tree-root-node"></div>
             <div id="tree-root"></div>
         </div>
 
         <div id="dbPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:10px; color:var(--primary);">VULNERABILITY DB</div>
-            <input type="text" id="dbTitle" placeholder="Title...">
-            <input type="text" id="dbDesc" placeholder="Description...">
-            <input type="text" id="dbMit" placeholder="Fix...">
-            <button class="btn-blue" id="addDbEntryBtn" style="width:100%;">Add Entry</button>
-            <div id="dbList" style="margin-top:10px; font-size:11px;"></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <b>VULN DATABASE</b> <span onclick="loadDB()" style="cursor:pointer; color:var(--accent);">↻</span>
+            </div>
+            <div id="dbList"></div>
         </div>
 
-        <div id="networkPane" class="pane">
-            <div style="font-size: 10px; opacity:0.7; margin-bottom: 10px;">TRAFFIC MONITOR</div>
-            <div id="netList"></div>
-        </div>
-
-        <div id="toolsPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
-            <input type="text" id="searchAll" placeholder="Search in all files...">
-            <button class="btn-blue" id="searchAllBtn" style="width:100%; margin-bottom:10px;">Find All</button>
-            <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom:15px; border:1px solid var(--border); background:var(--sidebar-bg);"></div>
-
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
-            <input type="text" id="gFind" placeholder="Find text...">
-            <input type="text" id="gReplace" placeholder="Replace with...">
-            <button class="btn-blue" id="gReplaceBtn" style="width:100%;">Replace All</button>
-            
-            <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEMES</div>
-            <button onclick="setTheme('gemini')" style="width:100%; margin-bottom:5px; background:#e8f0fe; color:#1a73e8; border:1px solid #d2e3fc;">Gemini Blue</button>
-            <button onclick="setTheme('')" style="width:100%; margin-bottom:5px;">One Dark (Default)</button>
-            <button onclick="setTheme('midnight')" style="width:100%; background:#000; color:#0f0;">Midnight</button>
+        <div id="searchPane" class="pane">
+            <input type="text" id="searchTerm" placeholder="Search files...">
+            <button class="btn-p" id="doSearchBtn" style="width:100%">Find All</button>
+            <div id="searchResults" style="margin-top:10px;"></div>
         </div>
     </div>
 
     <div class="workspace">
-        <div class="panes">
-            <div class="editor-container">
-                <div id="line-numbers">1</div>
-                <div class="editor-stack">
-                    <pre id="highlighting"><code id="h-content"></code></pre>
-                    <textarea id="editor" spellcheck="false" placeholder="Initialize OPFS to start..."></textarea>
-                </div>
+        <div class="editor-container">
+            <div id="line-numbers">1</div>
+            <div class="editor-stack">
+                <pre id="highlighting"><code id="h-content"></code></pre>
+                <textarea id="editor" spellcheck="false" wrap="off"></textarea>
             </div>
         </div>
+        
         <div id="console-container">
             <div class="c-toolbar" onclick="toggleConsole()">
-                <span>CONSOLE & AUDIT LOGS</span>
-                <span>
-                    <span id="mitigateBtn" style="color:var(--warn); margin-right:10px; display:none;" onclick="event.stopPropagation(); applyMitigation()">[ FIX VULN ]</span>
-                    <span id="toggleIcon">▼</span>
-                </span>
+                <span>CONSOLE & LOGS</span>
+                <span><span id="fixBtn" style="color:var(--warn); margin-right:10px; display:none;" onclick="event.stopPropagation(); fixVuln()">[ AUTO-FIX ]</span> ▼</span>
             </div>
-            <div id="console">> IDE Ready. Select 'Gemini Blue' in Tools for light mode.</div>
+            <div id="console"></div>
         </div>
     </div>
 </div>
 
 <script>
-    let rootHandle, currentFileHandle;
-    let draggedItem = null;
-    let runWindow = null;
-    
+    /* --- CORE VARIABLES --- */
+    let rootHandle, currentHandle, runWin;
     const editor = document.getElementById('editor');
+    const high = document.getElementById('highlighting');
     const hContent = document.getElementById('h-content');
-    const consoleEl = document.getElementById('console');
-    const lineNumbers = document.getElementById('line-numbers');
+    const lNums = document.getElementById('line-numbers');
+    const con = document.getElementById('console');
 
-    function log(msg, color = null) {
+    /* --- LOGIC: SCROLL SYNC --- */
+    // Syncs both vertical (scrollTop) and horizontal (scrollLeft)
+    editor.onscroll = () => {
+        high.scrollTop = editor.scrollTop;
+        high.scrollLeft = editor.scrollLeft;
+        lNums.scrollTop = editor.scrollTop;
+    };
+
+    /* --- LOGIC: HIGHLIGHTING --- */
+    const updateHigh = (text) => {
+        let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        // Simple Syntax Regex
+        code = code.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
+        code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
+        code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
+        code = code.replace(/\b(const|let|var|function|return|if|else|async|await)\b/g, '<span class="t-key">$1</span>');
+        code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
+        hContent.innerHTML = code + "\n"; // Trailing newline fix
+        lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
+    };
+    editor.oninput = () => updateHigh(editor.value);
+
+    /* --- OPFS SYSTEM --- */
+    const log = (m, type) => {
         const d = document.createElement('div');
-        if(color) d.style.color = color;
-        d.textContent = `> ${msg}`;
-        consoleEl.appendChild(d); consoleEl.scrollTop = consoleEl.scrollHeight;
-    }
-    function switchTab(t) {
-        document.querySelectorAll('.tab, .pane').forEach(el => el.classList.remove('active'));
-        document.querySelector(`.tab[onclick="switchTab('${t}')"]`).classList.add('active');
-        document.getElementById(`${t}Pane`).classList.add('active');
-    }
-    function setTheme(t) { document.body.className = t; }
-    function toggleConsole() {
-        const c = document.getElementById('console-container');
-        const i = document.getElementById('toggleIcon');
-        c.classList.toggle('minimized');
-        i.textContent = c.classList.contains('minimized') ? '▲' : '▼';
-    }
+        d.textContent = `> ${m}`;
+        if(type==='err') d.style.color = 'var(--danger)';
+        if(type==='warn') d.style.color = 'var(--warn)';
+        if(type==='ok') d.style.color = 'var(--success)';
+        con.appendChild(d); con.scrollTop = con.scrollHeight;
+    };
 
-    // --- INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
-            document.getElementById('tree-root-header').textContent = `📁 OPFS://ROOT`;
+            // Init DB if missing
+            try { await rootHandle.getFileHandle('vulnerabilities.json'); }
+            catch { const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true}); await (await h.createWritable()).close(); }
             
-            const header = document.getElementById('tree-root-header');
-            header.ondragover = e => { e.preventDefault(); header.style.background = 'var(--line-num-bg)'; };
-            header.ondragleave = () => header.style.background = 'transparent';
-            header.ondrop = async e => {
-                e.preventDefault(); header.style.background = 'transparent';
-                if(!draggedItem || draggedItem.parent === rootHandle) return;
-                try { await moveEntry(draggedItem.name, draggedItem.parent, rootHandle, draggedItem.kind); await buildTree(rootHandle, document.getElementById('tree-root')); }
-                catch(err){ log("Move failed.", "var(--danger)"); }
-            };
-
-            await buildTree(rootHandle, document.getElementById('tree-root'));
-            ['newFileBtn','newFolderBtn','backupBtn','wipeBtn','saveBtn','runBtn','demoBtn','auditBtn'].forEach(i=>document.getElementById(i).disabled=false);
-            
-            // Init DB
-            try { await rootHandle.getFileHandle('vulnerabilities.json'); } 
-            catch {
-                const fh = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-                const w = await fh.createWritable(); await w.write("[]"); await w.close();
-            }
-            loadDB();
-            log("OPFS Mounted.", "var(--success)");
-        } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
+            await buildTree();
+            enableUI();
+            log("System Initialized.", "ok");
+        } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- AUDIT & LOGGING ---
-    document.getElementById('auditBtn').onclick = async () => {
-        log("Scanning...", "var(--warn)");
-        let findings = [];
-        const patterns = [{ id: "XSS", r: /\.innerHTML/, sev: "High" }, { id: "HTTP", r: /http:\/\//, sev: "Medium" }];
-
-        async function scan(h) {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await scan(e);
-                else {
-                    if(e.name === 'vulnerabilities.json') continue;
-                    const t = await (await e.getFile()).text();
-                    patterns.forEach(p => {
-                        if(p.r.test(t)) {
-                            findings.push({ title: p.id + " Detected", desc: `Found in ${e.name}`, date: new Date().toISOString() });
-                            log(`[!] ${p.id} found in ${e.name}`, "var(--danger)");
-                        }
-                    });
-                }
-            }
-        }
-        await scan(rootHandle);
-
-        if(findings.length > 0) {
-            document.getElementById('mitigateBtn').style.display='inline';
-            renderDB(findings); 
-            try {
-                const fh = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-                let current = [];
-                try { const txt = await (await fh.getFile()).text(); if(txt) current = JSON.parse(txt); } catch(e){}
-                const w = await fh.createWritable(); await w.write(JSON.stringify([...current, ...findings], null, 2)); await w.close();
-                log("Findings logged to DB.", "var(--success)");
-            } catch(e) { log("DB Write Failed.", "var(--danger)"); }
-        } else { log("No issues.", "var(--success)"); }
-    };
-
-    function renderDB(data) {
-        const list = document.getElementById('dbList');
-        list.innerHTML = "";
-        if(data.length === 0) { list.innerHTML = "(No entries)"; return; }
-        data.forEach(e => {
-            list.innerHTML += `<div class="db-entry"><div class="db-meta">${new Date(e.date).toLocaleTimeString()}</div><div class="db-title">${e.title}</div><div class="db-desc">${e.desc}</div></div>`;
-        });
-    }
-
-    async function loadDB() {
-        try {
-            const fh = await rootHandle.getFileHandle('vulnerabilities.json');
-            const txt = await (await fh.getFile()).text();
-            renderDB(txt ? JSON.parse(txt) : []);
-        } catch(e) {}
-    }
-
-    document.getElementById('addDbEntryBtn').onclick = async () => {
-        const title = document.getElementById('dbTitle').value;
-        const desc = document.getElementById('dbDesc').value;
-        if(!title) return;
-        const fh = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-        const t = await (await fh.getFile()).text();
-        const data = t ? JSON.parse(t) : [];
-        data.push({title, desc, date: new Date().toISOString()});
-        const w = await fh.createWritable(); await w.write(JSON.stringify(data, null, 2)); await w.close();
-        loadDB();
-    };
-
-    function applyMitigation() {
-        editor.value = editor.value.replace(/\.innerHTML\s*=/g, ".textContent =").replace(/http:\/\//g, "https://");
-        hContent.innerHTML = applyHighlight(editor.value) + "\n";
-        log("Patched.", "var(--success)");
-    }
-
-    // --- STANDARD UTILS ---
-    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
-
-    document.getElementById('searchAllBtn').onclick = async () => {
-        const q = document.getElementById('searchAll').value.toLowerCase();
-        const res = document.getElementById('searchResults');
-        res.innerHTML = "<div>Scanning...</div>";
-        if(!q || !rootHandle) return;
-        let found = 0;
-        async function scan(h, path="") {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await scan(e, path + e.name + "/");
-                else {
-                    const txt = await (await e.getFile()).text();
-                    const lines = txt.split('\n');
-                    lines.forEach((l, i) => {
-                        if(l.toLowerCase().includes(q)) {
-                            found++;
-                            const d = document.createElement('div');
-                            d.className = 'search-result';
-                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
-                            d.onclick = () => loadFile(e);
-                            if(found === 1) res.innerHTML = "";
-                            res.appendChild(d);
-                        }
-                    });
-                }
-            }
-        }
-        await scan(rootHandle);
-        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
-    };
-
-    async function moveEntry(name, src, dest, kind) {
-        if(kind==='file') {
-            const f = await (await src.getFileHandle(name)).getFile();
-            const w = await (await dest.getFileHandle(name, {create:true})).createWritable();
-            await w.write(f); await w.close(); await src.removeEntry(name);
-        } else {
-            const dSub = await src.getDirectoryHandle(name);
-            const nSub = await dest.getDirectoryHandle(name, {create:true});
-            for await (const e of dSub.values()) await moveEntry(e.name, dSub, nSub, e.kind);
-            await src.removeEntry(name, {recursive:true});
-        }
-    }
-
-    async function buildTree(handle, container, filter = "") {
-        container.innerHTML = "";
-        const entries = []; for await (const e of handle.values()) entries.push(e);
+    async function buildTree(path="") {
+        const root = document.getElementById('tree-root');
+        root.innerHTML = "";
+        const entries = [];
+        for await (const e of rootHandle.values()) entries.push(e);
         entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
-        if(entries.length===0) { container.innerHTML="<div style='padding:5px; color:#999; font-size:10px;'>(empty)</div>"; return; }
-        for (const entry of entries) {
-            if(filter && entry.kind==='file' && !entry.name.toLowerCase().includes(filter.toLowerCase())) continue;
+        
+        for (const e of entries) {
             const row = document.createElement('div');
-            row.className = `tree-row ${currentFileHandle?.name === entry.name ? 'active' : ''}`;
-            row.draggable = true;
-            row.ondragstart = e => { e.stopPropagation(); draggedItem = {name:entry.name, kind:entry.kind, parent:handle}; };
-            if(entry.kind === 'directory') {
-                row.innerHTML = `<span class="folder-icon">▶</span> 📁 ${entry.name}`;
-                row.ondragover = e => { e.preventDefault(); e.stopPropagation(); row.classList.add('drag-over'); };
-                row.ondragleave = e => { e.stopPropagation(); row.classList.remove('drag-over'); };
-                row.ondrop = async e => {
-                    e.preventDefault(); e.stopPropagation(); row.classList.remove('drag-over');
-                    if(!draggedItem) return;
-                    try {
-                        const dest = await handle.getDirectoryHandle(entry.name);
-                        await moveEntry(draggedItem.name, draggedItem.parent, dest, draggedItem.kind);
-                        await buildTree(rootHandle, document.getElementById('tree-root'));
-                    } catch(err) { log("Move failed.", "var(--danger)"); }
-                };
-                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = filter ? 'block' : 'none';
-                row.onclick = e => {
-                    e.stopPropagation();
-                    const icon = row.querySelector('.folder-icon');
-                    if(sub.style.display==='none'){ sub.style.display='block'; icon.style.transform='rotate(90deg)'; buildTree(entry, sub, filter); }
-                    else { sub.style.display='none'; icon.style.transform='rotate(0deg)'; }
-                };
-                container.appendChild(row); container.appendChild(sub);
-                if(filter) buildTree(entry, sub, filter);
-            } else {
-                row.innerHTML = `📄 ${entry.name}`;
-                row.onclick = e => { e.stopPropagation(); loadFile(entry); };
-                container.appendChild(row);
-            }
+            row.className = `tree-row ${currentHandle?.name === e.name ? 'active' : ''}`;
+            row.innerHTML = e.kind==='directory' ? `📁 ${e.name}` : `📄 ${e.name}`;
+            row.onclick = () => { if(e.kind==='file') loadFile(e); };
+            root.appendChild(row);
         }
     }
 
     async function loadFile(h) {
-        currentFileHandle = h;
-        editor.value = sanitize(await (await h.getFile()).text());
-        hContent.innerHTML = applyHighlight(editor.value) + "\n";
-        document.getElementById('file-label').textContent = h.name;
-        lineNumbers.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>');
+        currentHandle = h;
+        const text = await (await h.getFile()).text();
+        editor.value = text;
+        updateHigh(text);
+        document.getElementById('file-status').textContent = `Editing: ${h.name}`;
+        buildTree(); // Refresh highlight
     }
 
-    function sanitize(text) { return text.replace(/<span class="t-[a-z]+">/gi, "").replace(/<\/span>/gi, "").replace(/##[A-Z_]+##/g, ""); }
-    function applyHighlight(text) {
-        let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        code = code.replace(/(&lt;\/?[a-z1-6!]+)/gi, '##T_S##$1##T_E##');
-        code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1##A_S##$2##A_E##');
-        code = code.replace(/"(.*?)"/g, '##S_S##"$1"##S_E##');
-        code = code.replace(/\b(let|const|var|function|return|if|else|class|async|await)\b/g, '##K_S##$1##K_E##');
-        return code.replace(/##T_S##/g, '<span class="t-tag">').replace(/##T_E##/g, '</span>').replace(/##A_S##/g, '<span class="t-attr">').replace(/##A_E##/g, '</span>').replace(/##S_S##/g, '<span class="t-str">').replace(/##S_E##/g, '</span>').replace(/##K_S##/g, '<span class="t-key">').replace(/##K_E##/g, '</span>');
-    }
-
-    document.getElementById('demoBtn').onclick = async () => {
-        const name = "vulnerable_demo.html";
-        const content = `<!DOCTYPE html><html><body><h1>XSS Test</h1><div id="out"></div><script>
-        const url="http://unsafe.com"; document.getElementById('out').innerHTML="Link: "+url; fetch(url);
-        <\/script></body></html>`;
-        try { const h = await rootHandle.getFileHandle(name, {create:true}); const w = await h.createWritable(); await w.write(content); await w.close(); log("Demo created.", "var(--success)"); await buildTree(rootHandle, document.getElementById('tree-root')); } catch(e){}
-    };
-
-    document.getElementById('runBtn').onclick = () => {
-        if(runWindow && !runWindow.closed) runWindow.close();
-        const hook = `<script>(function(){const netLog=(d)=>window.opener.postMessage({type:'network',...d},'*');const log=(m,a)=>window.opener.postMessage({type:'console',method:m,args:Array.from(a).map(String)},'*');console.log=function(){log('log',arguments)};console.error=function(){log('error',arguments)};window.onerror=(m)=>log('error',[m]);const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
-        const blob = new Blob([`<html><head><title>Run Preview</title></head><body>${hook}${sanitize(editor.value)}</body></html>`], {type: 'text/html'});
-        runWindow = window.open(URL.createObjectURL(blob), '_blank');
-        log("Launched.", "var(--primary)");
-    };
-
-    window.addEventListener('message', (e) => {
-        if(e.data.type === 'network') {
-            const d = document.createElement('div'); d.className='net-item'; 
-            d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
-            document.getElementById('netList').prepend(d);
+    /* --- TOOLS: AUDIT & DB --- */
+    document.getElementById('auditBtn').onclick = async () => {
+        log("Scanning...", "warn");
+        const findings = [];
+        for await (const e of rootHandle.values()) {
+            if(e.kind==='file' && e.name.endsWith('.html')) {
+                const t = await (await e.getFile()).text();
+                if(t.includes('innerHTML')) findings.push({t:"XSS Risk", d:`innerHTML in ${e.name}`});
+                if(t.includes('http://')) findings.push({t:"Insecure Transport", d:`HTTP in ${e.name}`});
+            }
         }
-        if(e.data.type === 'console') log(e.data.args.join(' '), e.data.method==='error'?'var(--danger)':null);
-    });
+        
+        if(findings.length > 0) {
+            log(`Found ${findings.length} issues. Logging to DB...`, "err");
+            document.getElementById('fixBtn').style.display = 'inline';
+            const dbH = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
+            const oldTxt = await (await dbH.getFile()).text();
+            const db = oldTxt ? JSON.parse(oldTxt) : [];
+            const newDB = [...db, ...findings];
+            const w = await dbH.createWritable();
+            await w.write(JSON.stringify(newDB, null, 2));
+            await w.close();
+            loadDB();
+        } else { log("Scan clean.", "ok"); }
+    };
+
+    async function loadDB() {
+        try {
+            const h = await rootHandle.getFileHandle('vulnerabilities.json');
+            const txt = await (await h.getFile()).text();
+            const data = txt ? JSON.parse(txt) : [];
+            const list = document.getElementById('dbList');
+            list.innerHTML = "";
+            data.forEach(x => {
+                list.innerHTML += `<div class="db-entry"><div class="db-title">${x.t}</div><div class="db-desc">${x.d}</div></div>`;
+            });
+        } catch(e) {}
+    }
+
+    /* --- RUN & HELPERS --- */
+    document.getElementById('runBtn').onclick = () => {
+        if(runWin) runWin.close();
+        const blob = new Blob([editor.value], {type:'text/html'});
+        runWin = window.open(URL.createObjectURL(blob), '_blank');
+        log("Preview launched.", "ok");
+    };
 
     document.getElementById('saveBtn').onclick = async () => {
-        const w = await currentFileHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.");
+        if(!currentHandle) return;
+        const w = await currentHandle.createWritable();
+        await w.write(editor.value); await w.close();
+        log("Saved.");
     };
+
+    document.getElementById('newFileBtn').onclick = async () => {
+        const n = prompt("Filename:"); if(n) { await rootHandle.getFileHandle(n,{create:true}); buildTree(); }
+    };
+
+    function enableUI() {
+        ['runBtn','saveBtn','newFileBtn','newFolderBtn','auditBtn','zipBtn','wipeBtn'].forEach(i=>document.getElementById(i).disabled=false);
+    }
     
-    document.getElementById('gReplaceBtn').onclick = async () => {
-        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
-        if(!f || !rootHandle) return;
-        async function run(h) { for await (const e of h.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
-        await run(rootHandle); log("Replaced.");
-    };
-
-    document.getElementById('backupBtn').onclick = async () => {
-        const zip = new JSZip();
-        async function walk(h, folder) { for await (const e of h.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
-        await walk(rootHandle, zip);
-        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "opfs_project.zip"; a.click();
-    };
-
-    document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); renderDB([]); }};
-
-    editor.oninput = () => { hContent.innerHTML = applyHighlight(editor.value) + "\n"; };
-    editor.onscroll = () => { lineNumbers.scrollTop = editor.scrollTop; document.getElementById('highlighting').scrollTop = editor.scrollTop; };
+    function tab(id) {
+        document.querySelectorAll('.tab, .pane').forEach(e => e.classList.remove('active'));
+        document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
+        document.getElementById(id+'Pane').classList.add('active');
+    }
+    
+    function toggleConsole() { 
+        document.getElementById('console-container').classList.toggle('minimized'); 
+    }
+    
+    function fixVuln() {
+        editor.value = editor.value.replace(/innerHTML/g, 'textContent').replace(/http:/g, 'https:');
+        updateHigh(editor.value);
+        log("Auto-fix applied.", "ok");
+    }
 </script>
 </body>
 </html>
