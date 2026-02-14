@@ -2,184 +2,139 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.5: Gemini Theme & Fixed Scrolling</title>
+    <title>IDE v9.6: Fixed Scroll & Run</title>
     <style>
         /* --- THEME VARIABLES --- */
         :root {
-            /* Default Dark (One Dark-ish) */
-            --bg: #282c34; --text: #abb2bf; --sidebar: #21252b; --border: #181a1f;
-            --header: #21252b; --header-text: #fff;
-            --line-num-bg: #21252b; --line-num-text: #495162;
-            --accent: #61afef; --success: #98c379; --warn: #e5c07b; --danger: #e06c75;
-            --sel: #3e4451; /* Selection color */
-            
-            /* Syntax */
-            --tag: #e06c75; --attr: #d19a66; --str: #98c379; --key: #c678dd; --comm: #5c6370;
-        }
-
-        body.gemini {
-            /* Gemini Light Theme */
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
-            --line-num-bg: #e1e5ea; --line-num-text: #747775;
+            --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
-            --sel: #d3e3fd;
-            
-            /* Syntax High Contrast */
+            /* Syntax */
             --tag: #0b57d0; --attr: #b3261e; --str: #146c2e; --key: #8ab4f8; --comm: #747775;
         }
+        body.midnight {
+            --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
+            --header: #000; --header-text: #0f0; --line-bg: #111; --line-text: #0f0;
+            --accent: #0f0; --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0;
+        }
 
-        /* --- GLOBAL LAYOUT --- */
-        body { font-family: 'Google Sans', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        /* --- LAYOUT --- */
+        body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
         header { 
-            background: var(--header); color: var(--header-text); 
-            height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
-            border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 500;
+            height: 45px; background: var(--header); border-bottom: 1px solid var(--border); display: flex; 
+            align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; color: var(--header-text);
         }
 
         .controls { 
-            background: var(--sidebar); border-bottom: 1px solid var(--border); padding: 8px 16px; 
+            padding: 8px 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); 
             display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; 
         }
 
         .main-layout { display: flex; flex: 1; overflow: hidden; }
 
-        /* --- SIDEBAR --- */
-        .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
-        
-        .tab-row { display: flex; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.03); }
-        .tab { flex: 1; padding: 12px 0; text-align: center; font-size: 11px; font-weight: 600; cursor: pointer; opacity: 0.6; transition: 0.2s; color: var(--text); }
-        .tab:hover { opacity: 1; background: rgba(0,0,0,0.05); }
-        .tab.active { opacity: 1; border-bottom: 2px solid var(--accent); color: var(--accent); background: var(--sidebar); }
-        
+        .sidebar { width: 320px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .tab-row { display: flex; background: rgba(0,0,0,0.05); }
+        .tab { flex: 1; padding: 10px; text-align: center; font-size: 10px; font-weight: bold; cursor: pointer; opacity: 0.7; }
+        .tab.active { background: var(--sidebar); color: var(--accent); border-bottom: 2px solid var(--accent); opacity: 1; }
         .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* --- WORKSPACE --- */
-        .workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); position: relative; }
+        /* --- EDITOR ENGINE (FIXED SCROLL) --- */
+        .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; min-width: 0; background: var(--bg); }
         
         .editor-container { 
-            flex: 1; display: flex; position: relative; min-height: 0; /* CRITICAL for grid overflow */
-            overflow: hidden; 
+            position: relative; display: flex; overflow: hidden; /* Hide outer scroll */
         }
 
         #line-numbers { 
-            width: 48px; background: var(--line-num-bg); color: var(--line-num-text); 
-            text-align: right; padding: 15px 8px; 
-            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; 
-            user-select: none; border-right: 1px solid var(--border); flex-shrink: 0;
-            overflow: hidden; 
+            width: 45px; background: var(--line-bg); color: var(--line-text); 
+            text-align: right; padding: 10px 5px; font-family: 'Fira Code', monospace; 
+            font-size: 13px; line-height: 1.5; border-right: 1px solid var(--border);
+            user-select: none; overflow: hidden;
         }
 
-        .editor-stack { flex: 1; position: relative; min-width: 0; }
-
-        /* SCROLL SYNC MAGIC */
-        #editor, #highlighting { 
-            margin: 0; padding: 15px; border: 0; width: 100%; height: 100%; 
-            position: absolute; top: 0; left: 0; 
-            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; 
-            white-space: pre; tab-size: 4; box-sizing: border-box;
+        .editor-stack { 
+            flex: 1; position: relative; min-width: 0; /* Allow grid shrink */
         }
 
-        #editor { 
-            color: transparent; background: transparent; caret-color: var(--text); 
-            z-index: 2; overflow: auto; resize: none; outline: none; 
+        /* The Input Layer (Scroll Master) */
+        #editor {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            margin: 0; padding: 10px; border: 0;
+            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5;
+            white-space: pre; /* Force horizontal scroll */
+            color: transparent; background: transparent; caret-color: var(--text);
+            z-index: 2; overflow: scroll; /* ALWAYS SHOW SCROLLBARS */
+            resize: none; outline: none; box-sizing: border-box;
         }
+
+        /* The Visual Layer (Follower) */
+        #highlighting {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            margin: 0; padding: 10px; border: 0;
+            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5;
+            white-space: pre; /* Match editor wrapping */
+            color: var(--text); z-index: 1; pointer-events: none; overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* --- CONSOLE & UI --- */
+        #console-container { height: 140px; background: #1e1e1e; color: #ccc; display: flex; flex-direction: column; transition: 0.2s; }
+        #console-container.minimized { height: 30px; }
+        .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; }
+        #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
+
+        button { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; }
+        .btn-p { background: var(--accent); color: #fff; border: none; }
+        .btn-d { background: var(--danger); color: #fff; border: none; }
+        .db-entry { padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); margin-bottom: 5px; background: rgba(255,255,255,0.5); font-size: 11px; }
         
-        #highlighting { 
-            color: var(--text); z-index: 1; pointer-events: none; overflow: hidden; 
-        }
-
-        /* --- CONSOLE --- */
-        #console-container { 
-            height: 150px; background: #1e1e1e; color: #ccc; border-top: 1px solid var(--border); 
-            display: flex; flex-direction: column; transition: height 0.2s ease; flex-shrink: 0;
-        }
-        #console-container.minimized { height: 32px; }
-        
-        .c-toolbar { 
-            padding: 6px 12px; background: #252526; font-size: 11px; font-weight: 700; color: #888; 
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;
-        }
-        .c-toolbar:hover { color: #fff; }
-        #console { flex: 1; padding: 8px; font-family: monospace; font-size: 11px; overflow-y: auto; white-space: pre-wrap; }
-
-        /* --- COMPONENTS --- */
-        button { 
-            padding: 6px 12px; border-radius: 4px; border: 1px solid transparent; font-size: 11px; font-weight: 600; 
-            cursor: pointer; background: var(--bg); color: var(--text); border-color: var(--border);
-        }
-        button:hover { filter: brightness(0.9); }
-        .btn-p { background: var(--accent); color: #fff; }
-        .btn-d { background: var(--danger); color: #fff; }
-        
-        input { 
-            background: var(--bg); color: var(--text); border: 1px solid var(--border); 
-            padding: 6px; border-radius: 4px; width: 100%; box-sizing: border-box; margin-bottom: 8px;
-        }
-
-        /* --- SCROLLBARS --- */
-        ::-webkit-scrollbar { width: 10px; height: 10px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
-        ::-webkit-scrollbar-thumb:hover { background-color: rgba(128,128,128,0.5); }
-
-        /* --- SYNTAX --- */
-        .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } 
-        .t-str { color: var(--str); } .t-key { color: var(--key); } .t-comm { color: var(--comm); font-style: italic; }
-        
-        /* Tree */
-        .tree-row { padding: 4px 8px; font-size: 13px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; }
-        .tree-row:hover { background: rgba(128,128,128,0.1); }
-        .tree-row.active { background: rgba(24, 119, 242, 0.15); color: var(--accent); font-weight: 600; }
+        /* Syntax Colors */
+        .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } .t-str { color: var(--str); }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body class="gemini"> <header>
-    <div>IDE v9.5 <span style="opacity:0.5; font-weight:400; margin-left:10px;">(OPFS • Auto-Sync • Secure)</span></div>
-    <div id="file-status" style="font-size: 11px; opacity: 0.7;">Ready</div>
+<body class="gemini">
+
+<header>
+    <div>IDE v9.6</div>
+    <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
 <div class="controls">
     <button class="btn-p" id="mountBtn">Initialize System</button>
-    <button class="btn-d" id="wipeBtn" disabled>Reset</button>
-    <div style="width:1px; height:16px; background:var(--border); margin:0 4px;"></div>
-    <button onclick="document.body.className='gemini'">Gemini Theme</button>
-    <button onclick="document.body.className='midnight'">Midnight</button>
-    <div style="width:1px; height:16px; background:var(--border); margin:0 4px;"></div>
-    <button id="runBtn" class="btn-p" disabled>▶ Run</button>
+    <button class="btn-d" id="wipeBtn" disabled>Wipe</button>
+    <div style="width:1px; height:16px; background:#ccc; margin:0 5px;"></div>
+    <button id="runBtn" class="btn-p" disabled>▶ Run in Window</button>
     <button id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
-    <button id="newFolderBtn" disabled>+ Folder</button>
-    <button id="zipBtn" disabled>Export ZIP</button>
+    <button id="demoBtn" disabled>Load Demo</button>
+    <button onclick="document.body.className='gemini'">Light</button>
+    <button onclick="document.body.className='midnight'">Dark</button>
 </div>
 
 <div class="main-layout">
     <div class="sidebar">
         <div class="tab-row">
-            <div class="tab active" onclick="tab('explorer')">FILES</div>
+            <div class="tab active" onclick="tab('files')">FILES</div>
             <div class="tab" onclick="tab('db')">DB</div>
-            <div class="tab" onclick="tab('search')">SEARCH</div>
+            <div class="tab" onclick="tab('tools')">TOOLS</div>
         </div>
-        
-        <div id="explorerPane" class="pane active">
+        <div id="filesPane" class="pane active">
             <div id="tree-root"></div>
         </div>
-
         <div id="dbPane" class="pane">
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <b>VULN DATABASE</b> <span onclick="loadDB()" style="cursor:pointer; color:var(--accent);">↻</span>
-            </div>
+            <button class="btn-p" style="width:100%; margin-bottom:10px;" id="addEntryBtn">Add Log</button>
             <div id="dbList"></div>
         </div>
-
-        <div id="searchPane" class="pane">
-            <input type="text" id="searchTerm" placeholder="Search files...">
-            <button class="btn-p" id="doSearchBtn" style="width:100%">Find All</button>
-            <div id="searchResults" style="margin-top:10px;"></div>
+        <div id="toolsPane" class="pane">
+            <input type="text" id="gFind" placeholder="Search files..." style="width:100%; padding:5px; margin-bottom:5px;">
+            <button class="btn-p" style="width:100%" id="searchBtn">Deep Search</button>
+            <div id="searchResults" style="margin-top:10px; font-size:11px;"></div>
         </div>
     </div>
 
@@ -188,14 +143,13 @@
             <div id="line-numbers">1</div>
             <div class="editor-stack">
                 <pre id="highlighting"><code id="h-content"></code></pre>
-                <textarea id="editor" spellcheck="false" wrap="off"></textarea>
+                <textarea id="editor" spellcheck="false" wrap="off" placeholder="Initialize to start..."></textarea>
             </div>
         </div>
-        
         <div id="console-container">
             <div class="c-toolbar" onclick="toggleConsole()">
-                <span>CONSOLE & LOGS</span>
-                <span><span id="fixBtn" style="color:var(--warn); margin-right:10px; display:none;" onclick="event.stopPropagation(); fixVuln()">[ AUTO-FIX ]</span> ▼</span>
+                <span>CONSOLE OUTPUT</span>
+                <span>▼</span>
             </div>
             <div id="console"></div>
         </div>
@@ -203,72 +157,71 @@
 </div>
 
 <script>
-    /* --- CORE VARIABLES --- */
-    let rootHandle, currentHandle, runWin;
+    let rootHandle, currentHandle;
     const editor = document.getElementById('editor');
     const high = document.getElementById('highlighting');
     const hContent = document.getElementById('h-content');
     const lNums = document.getElementById('line-numbers');
     const con = document.getElementById('console');
 
-    /* --- LOGIC: SCROLL SYNC --- */
-    // Syncs both vertical (scrollTop) and horizontal (scrollLeft)
+    // --- SCROLL SYNC FIX ---
     editor.onscroll = () => {
         high.scrollTop = editor.scrollTop;
         high.scrollLeft = editor.scrollLeft;
         lNums.scrollTop = editor.scrollTop;
     };
 
-    /* --- LOGIC: HIGHLIGHTING --- */
+    // --- SYNTAX HIGHLIGHTING ---
     const updateHigh = (text) => {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        // Simple Syntax Regex
         code = code.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
         code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
         code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
-        code = code.replace(/\b(const|let|var|function|return|if|else|async|await)\b/g, '<span class="t-key">$1</span>');
-        code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
-        hContent.innerHTML = code + "\n"; // Trailing newline fix
+        hContent.innerHTML = code + "\n"; 
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
     };
     editor.oninput = () => updateHigh(editor.value);
 
-    /* --- OPFS SYSTEM --- */
-    const log = (m, type) => {
+    // --- LOGGING ---
+    const log = (m, type='info') => {
         const d = document.createElement('div');
         d.textContent = `> ${m}`;
-        if(type==='err') d.style.color = 'var(--danger)';
-        if(type==='warn') d.style.color = 'var(--warn)';
-        if(type==='ok') d.style.color = 'var(--success)';
+        if(type==='err') d.style.color = '#ff6b6b';
+        if(type==='ok') d.style.color = '#51cf66';
         con.appendChild(d); con.scrollTop = con.scrollHeight;
     };
 
+    // --- OPFS INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
-            // Init DB if missing
-            try { await rootHandle.getFileHandle('vulnerabilities.json'); }
-            catch { const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true}); await (await h.createWritable()).close(); }
-            
+            try { await rootHandle.getFileHandle('vuln_db.json'); }
+            catch { 
+                const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
+                const w = await fh.createWritable(); await w.write("[]"); await w.close();
+            }
             await buildTree();
-            enableUI();
-            log("System Initialized.", "ok");
+            enableControls();
+            loadDB();
+            log("System Mounted.", "ok");
         } catch(e) { log(e.message, 'err'); }
     };
 
-    async function buildTree(path="") {
+    function enableControls() {
+        document.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+
+    // --- FILE TREE ---
+    async function buildTree() {
         const root = document.getElementById('tree-root');
         root.innerHTML = "";
-        const entries = [];
-        for await (const e of rootHandle.values()) entries.push(e);
-        entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
-        
-        for (const e of entries) {
-            const row = document.createElement('div');
-            row.className = `tree-row ${currentHandle?.name === e.name ? 'active' : ''}`;
-            row.innerHTML = e.kind==='directory' ? `📁 ${e.name}` : `📄 ${e.name}`;
-            row.onclick = () => { if(e.kind==='file') loadFile(e); };
-            root.appendChild(row);
+        for await (const e of rootHandle.values()) {
+            const div = document.createElement('div');
+            div.style.padding = "4px 8px";
+            div.style.cursor = "pointer";
+            div.innerHTML = e.kind === 'directory' ? `📁 ${e.name}` : `📄 ${e.name}`;
+            div.onclick = () => { if(e.kind==='file') loadFile(e); };
+            root.appendChild(div);
         }
     }
 
@@ -277,87 +230,82 @@
         const text = await (await h.getFile()).text();
         editor.value = text;
         updateHigh(text);
-        document.getElementById('file-status').textContent = `Editing: ${h.name}`;
-        buildTree(); // Refresh highlight
+        document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    /* --- TOOLS: AUDIT & DB --- */
+    // --- RUN IN WINDOW ---
+    document.getElementById('runBtn').onclick = () => {
+        const win = window.open("", "_blank");
+        win.document.write(editor.value);
+        win.document.close();
+        log("Opened in new window.", "ok");
+    };
+
+    // --- AUDIT & DB ---
     document.getElementById('auditBtn').onclick = async () => {
         log("Scanning...", "warn");
         const findings = [];
         for await (const e of rootHandle.values()) {
-            if(e.kind==='file' && e.name.endsWith('.html')) {
+            if(e.kind === 'file' && e.name.endsWith('.html')) {
                 const t = await (await e.getFile()).text();
-                if(t.includes('innerHTML')) findings.push({t:"XSS Risk", d:`innerHTML in ${e.name}`});
-                if(t.includes('http://')) findings.push({t:"Insecure Transport", d:`HTTP in ${e.name}`});
+                if(t.includes('innerHTML')) findings.push({t:"XSS Risk", d:`In: ${e.name}`});
+                if(t.includes('http:')) findings.push({t:"Insecure HTTP", d:`In: ${e.name}`});
             }
         }
         
         if(findings.length > 0) {
-            log(`Found ${findings.length} issues. Logging to DB...`, "err");
-            document.getElementById('fixBtn').style.display = 'inline';
-            const dbH = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-            const oldTxt = await (await dbH.getFile()).text();
-            const db = oldTxt ? JSON.parse(oldTxt) : [];
+            log(`Found ${findings.length} issues.`, "err");
+            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
+            const old = await (await fh.getFile()).text();
+            const db = old ? JSON.parse(old) : [];
             const newDB = [...db, ...findings];
-            const w = await dbH.createWritable();
-            await w.write(JSON.stringify(newDB, null, 2));
+            const w = await fh.createWritable();
+            await w.write(JSON.stringify(newDB));
             await w.close();
             loadDB();
-        } else { log("Scan clean.", "ok"); }
+        } else { log("Clean scan.", "ok"); }
     };
 
     async function loadDB() {
         try {
-            const h = await rootHandle.getFileHandle('vulnerabilities.json');
-            const txt = await (await h.getFile()).text();
-            const data = txt ? JSON.parse(txt) : [];
+            const fh = await rootHandle.getFileHandle('vuln_db.json');
+            const txt = await (await fh.getFile()).text();
             const list = document.getElementById('dbList');
             list.innerHTML = "";
-            data.forEach(x => {
-                list.innerHTML += `<div class="db-entry"><div class="db-title">${x.t}</div><div class="db-desc">${x.d}</div></div>`;
+            JSON.parse(txt).forEach(x => {
+                list.innerHTML += `<div class="db-entry"><b>${x.t}</b><br>${x.d}</div>`;
             });
-        } catch(e) {}
+        } catch(e){}
     }
 
-    /* --- RUN & HELPERS --- */
-    document.getElementById('runBtn').onclick = () => {
-        if(runWin) runWin.close();
-        const blob = new Blob([editor.value], {type:'text/html'});
-        runWin = window.open(URL.createObjectURL(blob), '_blank');
-        log("Preview launched.", "ok");
+    document.getElementById('demoBtn').onclick = async () => {
+        const name = "vuln_demo.html";
+        const content = `<html><body><script>document.body.innerHTML="<h1>XSS</h1>"; fetch('http://bad.com');<\/script></body></html>`;
+        const fh = await rootHandle.getFileHandle(name, {create:true});
+        const w = await fh.createWritable(); await w.write(content); await w.close();
+        buildTree();
+        log("Demo created.", "ok");
     };
 
     document.getElementById('saveBtn').onclick = async () => {
-        if(!currentHandle) return;
-        const w = await currentHandle.createWritable();
-        await w.write(editor.value); await w.close();
-        log("Saved.");
+        if(currentHandle) {
+            const w = await currentHandle.createWritable();
+            await w.write(editor.value); await w.close();
+            log("Saved.", "ok");
+        }
     };
 
     document.getElementById('newFileBtn').onclick = async () => {
-        const n = prompt("Filename:"); if(n) { await rootHandle.getFileHandle(n,{create:true}); buildTree(); }
+        const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(); }
     };
 
-    function enableUI() {
-        ['runBtn','saveBtn','newFileBtn','newFolderBtn','auditBtn','zipBtn','wipeBtn'].forEach(i=>document.getElementById(i).disabled=false);
-    }
-    
     function tab(id) {
         document.querySelectorAll('.tab, .pane').forEach(e => e.classList.remove('active'));
         document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
         document.getElementById(id+'Pane').classList.add('active');
     }
     
-    function toggleConsole() { 
-        document.getElementById('console-container').classList.toggle('minimized'); 
-    }
-    
-    function fixVuln() {
-        editor.value = editor.value.replace(/innerHTML/g, 'textContent').replace(/http:/g, 'https:');
-        updateHigh(editor.value);
-        log("Auto-fix applied.", "ok");
-    }
+    function toggleConsole() { document.getElementById('console-container').classList.toggle('minimized'); }
 </script>
 </body>
 </html>
