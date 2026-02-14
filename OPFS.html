@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v8.9: Deep Search & Full Suite</title>
+    <title>IDE v9.0: Stable Layout & Deep Search</title>
     <style>
         :root {
             --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
@@ -31,8 +31,6 @@
         .tree-row { display: flex; align-items: center; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; user-select: none; border: 1px solid transparent; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
         .tree-row.active { background: #e7f3ff; color: var(--primary); font-weight: 600; }
-        
-        /* Drag Targets */
         .drag-over { background: rgba(24, 119, 242, 0.1); border: 1px dashed var(--primary); }
         .folder-icon { margin-right: 6px; font-size: 10px; width: 12px; display: inline-block; transition: transform 0.1s; }
 
@@ -46,9 +44,9 @@
         .db-input, input[type="text"] { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
         .net-item { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; font-family: monospace; }
 
-        /* Workspace */
-        .workspace { flex: 1; display: grid; grid-template-rows: 1fr 140px; background: #ccc; }
-        .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; height: 100%; }
+        /* Workspace (Fixed Layout) */
+        .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; background: #ccc; overflow: hidden; }
+        .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; height: 100%; min-height: 0; /* CRITICAL FIX */ }
         .editor-container { position: relative; background: var(--editor-bg); display: flex; overflow: hidden; }
         #line-numbers { width: 40px; background: var(--line-num-bg); color: var(--line-num-text); padding: 15px 5px; text-align: right; font-family: monospace; font-size: 13px; line-height: 1.6; user-select: none; }
         .editor-stack { flex: 1; position: relative; overflow: hidden; }
@@ -56,8 +54,9 @@
         #editor { color: transparent; background: transparent; caret-color: #fff; z-index: 2; resize: none; }
         #highlighting { color: var(--editor-text); z-index: 1; pointer-events: none; }
         
-        #console-container { display: flex; flex-direction: column; background: #1e1e1e; border-top: 2px solid #333; }
-        .c-toolbar { background: #252526; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 10px; font-weight: bold; }
+        #console-container { display: flex; flex-direction: column; background: #1e1e1e; border-top: 2px solid #333; height: 140px; transition: height 0.2s; }
+        #console-container.minimized { height: 30px; }
+        .c-toolbar { background: #252526; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 10px; font-weight: bold; cursor: pointer; }
         #console { flex: 1; color: #d4d4d4; padding: 10px; font-family: monospace; font-size: 11px; overflow-y: auto; }
         
         button { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; font-size: 11px; background: #e4e6eb; margin-top:4px; }
@@ -73,7 +72,7 @@
 <body>
 
 <header>
-    <div>Local IDE v8.9 (OPFS)</div>
+    <div>Local IDE v9.0 (OPFS)</div>
     <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
 </header>
 
@@ -148,11 +147,14 @@
             <iframe id="preview" style="width:100%; height:100%; border:none; background:white;"></iframe>
         </div>
         <div id="console-container">
-            <div class="c-toolbar">
-                CONSOLE & AUDIT LOGS
-                <span id="mitigateBtn" style="color:var(--warn); cursor:pointer; display:none;" onclick="applyMitigation()">[ FIX VULNERABILITIES ]</span>
+            <div class="c-toolbar" onclick="toggleConsole()">
+                <span>CONSOLE & AUDIT LOGS</span>
+                <span>
+                    <span id="mitigateBtn" style="color:var(--warn); margin-right:10px; display:none;" onclick="event.stopPropagation(); applyMitigation()">[ FIX VULN ]</span>
+                    <span id="toggleIcon">▼</span>
+                </span>
             </div>
-            <div id="console">> IDE Ready. Deep Search enabled.</div>
+            <div id="console">> IDE Ready. Layout Stable.</div>
         </div>
     </div>
 </div>
@@ -179,6 +181,13 @@
     }
     function setTheme(t) { document.body.className = t; }
 
+    function toggleConsole() {
+        const c = document.getElementById('console-container');
+        const i = document.getElementById('toggleIcon');
+        c.classList.toggle('minimized');
+        i.textContent = c.classList.contains('minimized') ? '▲' : '▼';
+    }
+
     // --- INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
@@ -202,7 +211,7 @@
         } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
     };
 
-    // --- DEEP SEARCH & FILTER ---
+    // --- SEARCH & FILTER ---
     document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
 
     document.getElementById('searchAllBtn').onclick = async () => {
@@ -225,7 +234,7 @@
                             d.className = 'search-result';
                             d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
                             d.onclick = () => loadFile(e);
-                            if(found === 1) res.innerHTML = ""; // Clear "Scanning..." on first match
+                            if(found === 1) res.innerHTML = "";
                             res.appendChild(d);
                         }
                     });
@@ -374,4 +383,42 @@
     };
 
     document.getElementById('runBtn').onclick = () => {
-        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args
+        const hook = `<script>(function(){const netLog=(d)=>window.parent.postMessage({type:'network',...d},'*');const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
+        document.getElementById('preview').src = URL.createObjectURL(new Blob([hook + sanitize(editor.value)], {type: 'text/html'}));
+    };
+
+    window.addEventListener('message', (e) => {
+        if(e.data.type === 'network') {
+            const d = document.createElement('div'); d.className='net-item'; 
+            d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
+            document.getElementById('netList').prepend(d);
+        }
+    });
+
+    document.getElementById('saveBtn').onclick = async () => {
+        const w = await currentFileHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.");
+    };
+    
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
+        if(!f || !rootHandle) return;
+        async function run(h) { for await (const e of h.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
+        await run(rootHandle); log("Replaced.");
+    };
+
+    document.getElementById('backupBtn').onclick = async () => {
+        const zip = new JSZip();
+        async function walk(h, folder) { for await (const e of h.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
+        await walk(rootHandle, zip);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
+    };
+
+    document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
+    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }};
+
+    editor.oninput = () => { hContent.innerHTML = applyHighlight(editor.value) + "\n"; };
+    editor.onscroll = () => { lineNumbers.scrollTop = editor.scrollTop; document.getElementById('highlighting').scrollTop = editor.scrollTop; };
+</script>
+</body>
+</html>
