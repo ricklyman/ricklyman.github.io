@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.1: Multi-Window Runtime</title>
+    <title>IDE v9.2: Auto-Logging Security Suite</title>
     <style>
         :root {
             --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
@@ -40,11 +40,12 @@
         .match-line { color: var(--primary); font-weight: bold; margin-right: 5px; }
 
         /* DB & Inputs */
-        .db-entry { background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+        .db-entry { background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 4px; padding: 8px; margin-bottom: 8px; position: relative; }
+        .db-date { position: absolute; top: 8px; right: 8px; font-size: 9px; color: #999; }
         .db-input, input[type="text"] { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
         .net-item { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; font-family: monospace; }
 
-        /* Workspace (Full Editor Mode) */
+        /* Workspace (Fixed Layout) */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; background: #ccc; overflow: hidden; }
         .panes { display: grid; grid-template-columns: 1fr; gap: 1px; height: 100%; min-height: 0; }
         .editor-container { position: relative; background: var(--editor-bg); display: flex; overflow: hidden; }
@@ -54,7 +55,7 @@
         #editor { color: transparent; background: transparent; caret-color: #fff; z-index: 2; resize: none; }
         #highlighting { color: var(--editor-text); z-index: 1; pointer-events: none; }
         
-        #console-container { display: flex; flex-direction: column; background: #1e1e1e; border-top: 2px solid #333; height: 140px; transition: height 0.2s; }
+        #console-container { display: flex; flex-direction: column; background: #1e1e1e; border-top: 2px solid #333; height: 140px; transition: height 0.2s; flex-shrink: 0; }
         #console-container.minimized { height: 30px; }
         .c-toolbar { background: #252526; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 10px; font-weight: bold; cursor: pointer; }
         #console { flex: 1; color: #d4d4d4; padding: 10px; font-family: monospace; font-size: 11px; overflow-y: auto; }
@@ -72,7 +73,7 @@
 <body>
 
 <header>
-    <div>Local IDE v9.1 (OPFS)</div>
+    <div>Local IDE v9.2 (OPFS)</div>
     <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
 </header>
 
@@ -82,7 +83,7 @@
     <div style="width:1px; height:20px; background:#ddd; margin:0 5px;"></div>
     <button class="btn-demo" id="demoBtn" disabled>⚡ Load Demo</button>
     <button class="btn-run" id="runBtn" disabled>▶ Run in New Window</button>
-    <button class="btn-warn" id="auditBtn" disabled>🛡️ Audit</button>
+    <button class="btn-warn" id="auditBtn" disabled>🛡️ Audit & Log</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
     <button id="newFolderBtn" disabled>+ Folder</button>
@@ -144,16 +145,16 @@
                     <textarea id="editor" spellcheck="false" placeholder="Initialize OPFS to start..."></textarea>
                 </div>
             </div>
-            </div>
+        </div>
         <div id="console-container">
             <div class="c-toolbar" onclick="toggleConsole()">
-                <span>CONSOLE & AUDIT LOGS (LINKED TO POPUP)</span>
+                <span>CONSOLE & AUDIT LOGS</span>
                 <span>
                     <span id="mitigateBtn" style="color:var(--warn); margin-right:10px; display:none;" onclick="event.stopPropagation(); applyMitigation()">[ FIX VULN ]</span>
                     <span id="toggleIcon">▼</span>
                 </span>
             </div>
-            <div id="console">> IDE Ready. Click 'Run' to open separate preview window.</div>
+            <div id="console">> IDE Ready. Audit will now auto-save to JSON.</div>
         </div>
     </div>
 </div>
@@ -211,7 +212,126 @@
         } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
     };
 
-    // --- DRAG & DROP ENGINE ---
+    // --- AUTO-LOGGING AUDIT ---
+    document.getElementById('auditBtn').onclick = async () => {
+        log("Scanning project...", "var(--warn)");
+        let findings = [];
+        
+        const patterns = [
+            { id: "XSS-01", name: "Dangerous innerHTML", regex: /\.innerHTML\s*=/, sev: "High" },
+            { id: "NET-01", name: "Insecure HTTP", regex: /http:\/\//, sev: "Medium" },
+            { id: "RCE-01", name: "Eval Usage", regex: /eval\s*\(/, sev: "Critical" }
+        ];
+
+        async function scan(h) {
+            for await (const e of h.values()) {
+                if(e.kind === 'directory') await scan(e);
+                else {
+                    if(e.name === 'vulnerabilities.json') continue; // Don't scan the DB
+                    const t = await (await e.getFile()).text();
+                    patterns.forEach(p => {
+                        if(p.regex.test(t)) {
+                            findings.push({ title: p.name, desc: `Found in ${e.name} (Sev: ${p.sev})`, mit: "Auto-detected" });
+                            log(`[${p.sev}] ${p.name} in ${e.name}`, "var(--danger)");
+                        }
+                    });
+                }
+            }
+        }
+        await scan(rootHandle);
+
+        if(findings.length > 0) {
+            document.getElementById('mitigateBtn').style.display = 'inline';
+            // AUTO-SAVE TO DB
+            try {
+                const h = await rootHandle.getFileHandle('vulnerabilities.json', {create: true});
+                const existingText = await (await h.getFile()).text();
+                const currentDB = existingText ? JSON.parse(existingText) : [];
+                
+                // Add timestamp to findings
+                const newEntries = findings.map(f => ({...f, date: new Date().toISOString()}));
+                const updatedDB = [...currentDB, ...newEntries];
+                
+                const w = await h.createWritable();
+                await w.write(JSON.stringify(updatedDB, null, 2));
+                await w.close();
+                
+                log(`Saved ${findings.length} findings to DB.`, "var(--success)");
+                loadDB(); // Refresh view
+            } catch(e) { log("Failed to save to JSON DB.", "var(--danger)"); }
+        } else {
+            log("No vulnerabilities found.", "var(--success)");
+        }
+    };
+
+    function applyMitigation() {
+        editor.value = editor.value.replace(/\.innerHTML\s*=/g, ".textContent =").replace(/http:\/\//g, "https://");
+        hContent.innerHTML = applyHighlight(editor.value) + "\n";
+        log("Patched current file.", "var(--success)");
+    }
+
+    // --- DB & SEARCH ---
+    async function loadDB() {
+        const list = document.getElementById('dbList');
+        try {
+            const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
+            const t = await (await h.getFile()).text();
+            const data = t ? JSON.parse(t) : [];
+            list.innerHTML = "";
+            data.forEach(e => {
+                const date = e.date ? new Date(e.date).toLocaleTimeString() : "";
+                list.innerHTML += `<div class="db-entry"><span class="db-date">${date}</span><b>${e.title}</b><br>${e.desc}</div>`;
+            });
+        } catch(e) {}
+    }
+
+    document.getElementById('addDbEntryBtn').onclick = async () => {
+        const title = document.getElementById('dbTitle').value;
+        const desc = document.getElementById('dbDesc').value;
+        if(!title) return;
+        const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
+        const t = await (await h.getFile()).text();
+        const data = t ? JSON.parse(t) : [];
+        data.push({title, desc, date: new Date().toISOString()});
+        const w = await h.createWritable(); await w.write(JSON.stringify(data, null, 2)); await w.close();
+        loadDB();
+    };
+
+    // --- STANDARD UTILS ---
+    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
+
+    document.getElementById('searchAllBtn').onclick = async () => {
+        const q = document.getElementById('searchAll').value.toLowerCase();
+        const res = document.getElementById('searchResults');
+        res.innerHTML = "<div>Scanning...</div>";
+        if(!q || !rootHandle) return;
+        
+        let found = 0;
+        async function scan(h, path="") {
+            for await (const e of h.values()) {
+                if(e.kind==='directory') await scan(e, path + e.name + "/");
+                else {
+                    const txt = await (await e.getFile()).text();
+                    const lines = txt.split('\n');
+                    lines.forEach((l, i) => {
+                        if(l.toLowerCase().includes(q)) {
+                            found++;
+                            const d = document.createElement('div');
+                            d.className = 'search-result';
+                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
+                            d.onclick = () => loadFile(e);
+                            if(found === 1) res.innerHTML = "";
+                            res.appendChild(d);
+                        }
+                    });
+                }
+            }
+        }
+        await scan(rootHandle);
+        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
+    };
+
+    // --- TREE & FILES ---
     async function moveEntry(name, src, dest, kind) {
         if(kind==='file') {
             const f = await (await src.getFileHandle(name)).getFile();
@@ -279,7 +399,6 @@
         lineNumbers.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>');
     }
 
-    // --- FEATURES ---
     function sanitize(text) { return text.replace(/<span class="t-[a-z]+">/gi, "").replace(/<\/span>/gi, "").replace(/##[A-Z_]+##/g, ""); }
     function applyHighlight(text) {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -301,111 +420,20 @@
         try { const h = await rootHandle.getFileHandle(name, {create:true}); const w = await h.createWritable(); await w.write(content); await w.close(); log("Demo created.", "var(--success)"); await buildTree(rootHandle, document.getElementById('tree-root')); } catch(e){}
     };
 
-    document.getElementById('auditBtn').onclick = async () => {
-        log("Scanning...", "var(--warn)");
-        let findings = false;
-        async function scan(h) {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await scan(e);
-                else {
-                    const t = await (await e.getFile()).text();
-                    if(/\.innerHTML\s*=/.test(t)) { findings=true; log(`[XSS] in ${e.name}`, "var(--warn)"); }
-                }
-            }
-        }
-        await scan(rootHandle);
-        if(findings) document.getElementById('mitigateBtn').style.display='inline';
-        else log("No issues.", "var(--success)");
-    };
-
-    function applyMitigation() {
-        editor.value = editor.value.replace(/\.innerHTML\s*=/g, ".textContent =").replace(/http:\/\//g, "https://");
-        hContent.innerHTML = applyHighlight(editor.value) + "\n";
-        log("Patched.", "var(--success)");
-    }
-
-    // --- DB & SEARCH ---
-    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
-
-    document.getElementById('searchAllBtn').onclick = async () => {
-        const q = document.getElementById('searchAll').value.toLowerCase();
-        const res = document.getElementById('searchResults');
-        res.innerHTML = "<div>Scanning...</div>";
-        if(!q || !rootHandle) return;
-        
-        let found = 0;
-        async function scan(h, path="") {
-            for await (const e of h.values()) {
-                if(e.kind==='directory') await scan(e, path + e.name + "/");
-                else {
-                    const txt = await (await e.getFile()).text();
-                    const lines = txt.split('\n');
-                    lines.forEach((l, i) => {
-                        if(l.toLowerCase().includes(q)) {
-                            found++;
-                            const d = document.createElement('div');
-                            d.className = 'search-result';
-                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
-                            d.onclick = () => loadFile(e);
-                            if(found === 1) res.innerHTML = "";
-                            res.appendChild(d);
-                        }
-                    });
-                }
-            }
-        }
-        await scan(rootHandle);
-        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
-    };
-
-    async function loadDB() {
-        const list = document.getElementById('dbList');
-        try {
-            const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-            const t = await (await h.getFile()).text();
-            const data = t ? JSON.parse(t) : [];
-            list.innerHTML = "";
-            data.forEach(e => list.innerHTML += `<div class="db-entry"><b>${e.title}</b><br>${e.desc}</div>`);
-        } catch(e) {}
-    }
-
-    document.getElementById('addDbEntryBtn').onclick = async () => {
-        const title = document.getElementById('dbTitle').value;
-        const desc = document.getElementById('dbDesc').value;
-        if(!title) return;
-        const h = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-        const t = await (await h.getFile()).text();
-        const data = t ? JSON.parse(t) : [];
-        data.push({title, desc});
-        const w = await h.createWritable(); await w.write(JSON.stringify(data)); await w.close();
-        loadDB();
-    };
-
-    // --- RUN IN NEW WINDOW ---
     document.getElementById('runBtn').onclick = () => {
         if(runWindow && !runWindow.closed) runWindow.close();
-        
         const hook = `<script>
             (function(){
                 const netLog=(d)=>window.opener.postMessage({type:'network',...d},'*');
                 const log=(m,a)=>window.opener.postMessage({type:'console',method:m,args:Array.from(a).map(String)},'*');
-                console.log=function(){log('log',arguments)};
-                console.error=function(){log('error',arguments)};
-                window.onerror=(m)=>log('error',[m]);
-                
+                console.log=function(){log('log',arguments)}; console.error=function(){log('error',arguments)}; window.onerror=(m)=>log('error',[m]);
                 const originalFetch=window.fetch;
-                window.fetch=async(...args)=>{
-                    const u=args[0]instanceof Request?args[0].url:args[0];
-                    const m=(args[1]&&args[1].method)||'GET';
-                    try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}
-                    catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}
-                }
+                window.fetch=async(...args)=>{ const u=args[0]instanceof Request?args[0].url:args[0]; const m=(args[1]&&args[1].method)||'GET'; try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}
             })();
         <\/script>`;
-        
         const blob = new Blob([`<html><head><title>Run Preview</title></head><body>${hook}${sanitize(editor.value)}</body></html>`], {type: 'text/html'});
         runWindow = window.open(URL.createObjectURL(blob), '_blank');
-        log("Opened in new window. Console logs linked.", "var(--primary)");
+        log("Run launched in new window.", "var(--primary)");
     };
 
     window.addEventListener('message', (e) => {
@@ -414,9 +442,7 @@
             d.innerHTML = `<b style="color:#1877f2">${e.data.method}</b> ${e.data.url} (${e.data.status})`;
             document.getElementById('netList').prepend(d);
         }
-        if(e.data.type === 'console') {
-            log(e.data.args.join(' '), e.data.method==='error'?'var(--danger)':null);
-        }
+        if(e.data.type === 'console') log(e.data.args.join(' '), e.data.method==='error'?'var(--danger)':null);
     });
 
     document.getElementById('saveBtn').onclick = async () => {
@@ -434,7 +460,7 @@
         const zip = new JSZip();
         async function walk(h, folder) { for await (const e of h.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
         await walk(rootHandle, zip);
-        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "opfs_project.zip"; a.click();
     };
 
     document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
