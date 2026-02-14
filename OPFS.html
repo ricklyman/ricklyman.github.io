@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v10.3: Mask & Restore Syntax</title>
+    <title>IDE v10.4: Tokenized Syntax Engine</title>
     <style>
-        /* --- THEME VARIABLES --- */
+        /* --- GEMINI THEME PALETTE --- */
         :root {
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
@@ -12,12 +12,12 @@
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
             
             /* SYNTAX COLORS */
-            --tag: #d93025;  /* Red */
-            --attr: #e37400; /* Orange/Brown */
-            --str: #188038;  /* Green */
-            --key: #a142f4;  /* Purple */
-            --obj: #1a73e8;  /* Blue */
-            --comm: #747775; /* Gray */
+            --tag: #d93025;  /* Red (HTML Tags) */
+            --attr: #e37400; /* Orange/Brown (Attributes) */
+            --str: #188038;  /* Green (Strings) */
+            --key: #a142f4;  /* Purple (JS Keywords) */
+            --obj: #1a73e8;  /* Blue (document, window) */
+            --comm: #747775; /* Gray (Comments) */
         }
         body.midnight {
             --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
@@ -25,7 +25,7 @@
             --accent: #0f0; --tag: #ff5555; --attr: #f1fa8c; --str: #50fa7b; --key: #bd93f9; --obj: #8be9fd; --comm: #6272a4;
         }
 
-        /* --- GLOBAL LAYOUT --- */
+        /* --- LAYOUT --- */
         body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: 'Google Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
         header { 
@@ -52,7 +52,7 @@
         .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* --- PANE STYLES --- */
+        /* --- UI COMPONENTS --- */
         .tree-row { padding: 4px 0; cursor: pointer; display: flex; align-items: center; font-size: 13px; white-space: nowrap; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
         .tree-row.active { background: rgba(24, 119, 242, 0.1); color: var(--accent); font-weight: 600; }
@@ -63,7 +63,8 @@
         .search-res { padding: 5px; border-bottom: 1px solid var(--border); font-size: 11px; cursor: pointer; }
         .search-res:hover { background: rgba(0,0,0,0.05); }
 
-        /* UI Inputs */
+        /* Fixed DB Input Section */
+        .db-form { flex-shrink: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
         input[type="text"], .db-input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; font-size: 12px; background: var(--bg); color: var(--text); }
         
         button { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; }
@@ -93,7 +94,7 @@
         .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
 
-        /* Syntax Classes */
+        /* SYNTAX CLASSES */
         .t-tag { color: var(--tag); font-weight: 700; } 
         .t-attr { color: var(--attr); } 
         .t-str { color: var(--str); } 
@@ -107,7 +108,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v10.3 <span style="opacity:0.5; font-weight:400;">(Mask & Restore)</span></div>
+    <div>IDE v10.4 <span style="opacity:0.5; font-weight:400;">(Tokenized Highlighting)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -138,14 +139,16 @@
         </div>
 
         <div id="dbPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px; color:var(--accent);">ADD VULNERABILITY LOG</div>
-            <input type="text" id="dbTitle" class="db-input" placeholder="Title (e.g. XSS)">
-            <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
-            <input type="text" id="dbMit" class="db-input" placeholder="Fix/Mitigation...">
-            <button class="btn-p" style="width:100%; margin-bottom:15px;" id="addDbEntryBtn">Add Entry</button>
+            <div class="db-form">
+                <div style="font-weight:bold; font-size:11px; margin-bottom:5px; color:var(--accent);">ADD VULNERABILITY</div>
+                <input type="text" id="dbTitle" class="db-input" placeholder="Title (e.g. XSS)">
+                <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
+                <input type="text" id="dbMit" class="db-input" placeholder="Fix/Mitigation...">
+                <button class="btn-p" style="width:100%;" id="addDbEntryBtn">Add Entry</button>
+            </div>
             
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px; border-top:1px solid var(--border); padding-top:10px;">
-                <b style="font-size:11px;">DATABASE ENTRIES</b>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <b style="font-size:11px;">LOG ENTRIES</b>
                 <span onclick="loadDB()" style="cursor:pointer; color:var(--accent); font-size:10px;">REFRESH</span>
             </div>
             <div id="dbList"></div>
@@ -212,44 +215,41 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- COLLISION-PROOF HIGHLIGHTER ---
+    // --- TOKENIZED SYNTAX HIGHLIGHTER (THE FIX) ---
     const updateHigh = (text) => {
-        // 1. Sanitize HTML entities
+        // 1. Escape HTML
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-        // 2. MASKING: Find HTML tags and hide them
-        const tags = [];
-        code = code.replace(/(&lt;\/?[a-z0-9]+.*?>)/gi, (match) => {
-            tags.push(match);
-            return `__TAG_${tags.length - 1}__`;
+        // 2. Tokenize (Hide) HTML Tags & Strings to prevent collisions
+        const tokens = [];
+        
+        // Hide Strings first
+        code = code.replace(/"(.*?)"/g, (m) => { tokens.push(`<span class="t-str">${m}</span>`); return `___TOK_${tokens.length-1}___`; });
+        code = code.replace(/'(.*?)'/g, (m) => { tokens.push(`<span class="t-str">${m}</span>`); return `___TOK_${tokens.length-1}___`; });
+
+        // Hide HTML Tags (Beautify them while hiding)
+        code = code.replace(/(&lt;\/?[a-z0-9]+.*?>)/gi, (m) => { 
+            // Colorize the tag content BEFORE hiding it
+            let colored = m.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>'); // Tag Name (Red)
+            colored = colored.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>'); // Attributes (Orange)
+            tokens.push(colored); 
+            return `___TOK_${tokens.length-1}___`; 
         });
 
-        // 3. SAFE HIGHLIGHTING (Applied only to content outside tags)
-        
-        // Strings (Green)
-        code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
-        code = code.replace(/'(.*?)'/g, "<span class='t-str'>'$1'</span>");
-        
-        // JS Keywords (Purple) - Safe now because HTML tags are masked
+        // 3. Highlight JavaScript (Safe now!)
+        // Keywords (Purple)
         const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b";
         code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
         
-        // Built-in Objects (Blue)
+        // Objects (Blue)
         const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
         code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
         
         // Comments (Gray)
         code = code.replace(/(\/\/.*)/g, '<span class="t-comm">$1</span>');
 
-        // 4. RESTORE & COLORIZE HTML TAGS
-        code = code.replace(/__TAG_(\d+)__/g, (match, i) => {
-            let tag = tags[i];
-            // Highlight Tag Name
-            tag = tag.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
-            // Highlight Attributes (look for word=)
-            tag = tag.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
-            return tag;
-        });
+        // 4. Restore Tokens
+        code = code.replace(/___TOK_(\d+)___/g, (m, i) => tokens[i]);
 
         hContent.innerHTML = code + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
