@@ -2,29 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.6: Fixed Scroll & Run</title>
+    <title>IDE v9.7: All Tabs Restored</title>
     <style>
-        /* --- THEME VARIABLES --- */
+        /* --- THEME & VARIABLES --- */
         :root {
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
             --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
-            /* Syntax */
             --tag: #0b57d0; --attr: #b3261e; --str: #146c2e; --key: #8ab4f8; --comm: #747775;
         }
         body.midnight {
             --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
             --header: #000; --header-text: #0f0; --line-bg: #111; --line-text: #0f0;
-            --accent: #0f0; --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0;
+            --accent: #0f0; --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0; --comm: #006400;
         }
 
         /* --- LAYOUT --- */
         body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
         header { 
-            height: 45px; background: var(--header); border-bottom: 1px solid var(--border); display: flex; 
-            align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; color: var(--header-text);
+            height: 45px; background: var(--header); border-bottom: 1px solid var(--border); 
+            display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; 
         }
 
         .controls { 
@@ -34,65 +33,70 @@
 
         .main-layout { display: flex; flex: 1; overflow: hidden; }
 
-        .sidebar { width: 320px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .tab-row { display: flex; background: rgba(0,0,0,0.05); }
-        .tab { flex: 1; padding: 10px; text-align: center; font-size: 10px; font-weight: bold; cursor: pointer; opacity: 0.7; }
+        /* --- SIDEBAR & TABS --- */
+        .sidebar { width: 340px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        
+        .tab-row { display: flex; background: rgba(0,0,0,0.05); overflow-x: auto; }
+        .tab { 
+            flex: 1; padding: 10px 5px; text-align: center; font-size: 10px; font-weight: bold; 
+            cursor: pointer; opacity: 0.7; min-width: 50px; border-bottom: 2px solid transparent; 
+        }
         .tab.active { background: var(--sidebar); color: var(--accent); border-bottom: 2px solid var(--accent); opacity: 1; }
+        
         .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* --- EDITOR ENGINE (FIXED SCROLL) --- */
+        /* --- PANE SPECIFIC STYLES --- */
+        /* Tree */
+        .tree-row { padding: 4px 8px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; font-size: 13px; }
+        .tree-row:hover { background: rgba(0,0,0,0.05); }
+        .tree-row.active { background: rgba(24, 119, 242, 0.1); color: var(--accent); font-weight: 600; }
+        
+        /* DB */
+        .db-entry { padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); margin-bottom: 6px; background: rgba(255,255,255,0.5); border-radius: 4px; }
+        .db-title { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+        .db-desc { font-size: 11px; opacity: 0.8; }
+        
+        /* Network */
+        .net-item { font-family: monospace; font-size: 11px; padding: 5px; border-bottom: 1px solid var(--border); }
+        
+        /* Search */
+        .search-res { padding: 6px; border-bottom: 1px solid var(--border); font-size: 11px; cursor: pointer; }
+        .search-res:hover { background: rgba(0,0,0,0.05); }
+
+        /* --- EDITOR ENGINE --- */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; min-width: 0; background: var(--bg); }
         
-        .editor-container { 
-            position: relative; display: flex; overflow: hidden; /* Hide outer scroll */
-        }
-
+        .editor-container { position: relative; display: flex; overflow: hidden; }
         #line-numbers { 
-            width: 45px; background: var(--line-bg); color: var(--line-text); 
-            text-align: right; padding: 10px 5px; font-family: 'Fira Code', monospace; 
-            font-size: 13px; line-height: 1.5; border-right: 1px solid var(--border);
-            user-select: none; overflow: hidden;
+            width: 45px; background: var(--line-bg); color: var(--line-text); text-align: right; 
+            padding: 10px 5px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; 
+            border-right: 1px solid var(--border); user-select: none; 
         }
-
-        .editor-stack { 
-            flex: 1; position: relative; min-width: 0; /* Allow grid shrink */
+        .editor-stack { flex: 1; position: relative; min-width: 0; }
+        
+        #editor, #highlighting { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 10px; border: 0;
+            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; white-space: pre; 
+            box-sizing: border-box; 
         }
+        #editor { color: transparent; background: transparent; caret-color: var(--text); z-index: 2; overflow: scroll; resize: none; outline: none; }
+        #highlighting { color: var(--text); z-index: 1; pointer-events: none; overflow: hidden; }
 
-        /* The Input Layer (Scroll Master) */
-        #editor {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            margin: 0; padding: 10px; border: 0;
-            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5;
-            white-space: pre; /* Force horizontal scroll */
-            color: transparent; background: transparent; caret-color: var(--text);
-            z-index: 2; overflow: scroll; /* ALWAYS SHOW SCROLLBARS */
-            resize: none; outline: none; box-sizing: border-box;
-        }
-
-        /* The Visual Layer (Follower) */
-        #highlighting {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            margin: 0; padding: 10px; border: 0;
-            font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5;
-            white-space: pre; /* Match editor wrapping */
-            color: var(--text); z-index: 1; pointer-events: none; overflow: hidden;
-            box-sizing: border-box;
-        }
-
-        /* --- CONSOLE & UI --- */
-        #console-container { height: 140px; background: #1e1e1e; color: #ccc; display: flex; flex-direction: column; transition: 0.2s; }
+        /* --- CONSOLE --- */
+        #console-container { height: 140px; background: #1e1e1e; color: #ccc; display: flex; flex-direction: column; transition: 0.2s; border-top: 2px solid var(--border); }
         #console-container.minimized { height: 30px; }
         .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
 
-        button { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; }
+        /* UI Elements */
+        button { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; margin-top: 4px; }
         .btn-p { background: var(--accent); color: #fff; border: none; }
         .btn-d { background: var(--danger); color: #fff; border: none; }
-        .db-entry { padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); margin-bottom: 5px; background: rgba(255,255,255,0.5); font-size: 11px; }
+        input { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
         
         /* Syntax Colors */
-        .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } .t-str { color: var(--str); }
+        .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } .t-str { color: var(--str); } .t-key { color: var(--key); font-weight: bold; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -100,12 +104,12 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v9.6</div>
+    <div>IDE v9.7 <span style="opacity:0.5; font-weight:400;">(OPFS • Full Suite)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
 <div class="controls">
-    <button class="btn-p" id="mountBtn">Initialize System</button>
+    <button class="btn-p" id="mountBtn">Initialize</button>
     <button class="btn-d" id="wipeBtn" disabled>Wipe</button>
     <div style="width:1px; height:16px; background:#ccc; margin:0 5px;"></div>
     <button id="runBtn" class="btn-p" disabled>▶ Run in Window</button>
@@ -113,28 +117,57 @@
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
     <button id="demoBtn" disabled>Load Demo</button>
-    <button onclick="document.body.className='gemini'">Light</button>
-    <button onclick="document.body.className='midnight'">Dark</button>
+    <button id="backupBtn" disabled>💾 ZIP</button>
 </div>
 
 <div class="main-layout">
     <div class="sidebar">
         <div class="tab-row">
             <div class="tab active" onclick="tab('files')">FILES</div>
+            <div class="tab" onclick="tab('search')">SEARCH</div>
             <div class="tab" onclick="tab('db')">DB</div>
+            <div class="tab" onclick="tab('net')">NET</div>
             <div class="tab" onclick="tab('tools')">TOOLS</div>
         </div>
+        
         <div id="filesPane" class="pane active">
             <div id="tree-root"></div>
         </div>
-        <div id="dbPane" class="pane">
-            <button class="btn-p" style="width:100%; margin-bottom:10px;" id="addEntryBtn">Add Log</button>
-            <div id="dbList"></div>
+
+        <div id="searchPane" class="pane">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">PROJECT SEARCH</div>
+            <input type="text" id="deepSearchInput" placeholder="Text to find...">
+            <button class="btn-p" style="width:100%" id="deepSearchBtn">Find All</button>
+            <div id="searchResults" style="margin-top:10px;"></div>
         </div>
+
+        <div id="dbPane" class="pane">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <b style="font-size:11px;">VULNERABILITY LOG</b>
+                <span onclick="loadDB()" style="cursor:pointer; color:var(--accent); font-size:10px;">REFRESH</span>
+            </div>
+            <div id="dbList"></div>
+            <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
+            <b style="font-size:11px;">ADD ENTRY</b>
+            <input type="text" id="dbTitle" placeholder="Title...">
+            <input type="text" id="dbDesc" placeholder="Description...">
+            <button class="btn-p" style="width:100%" id="addDbEntryBtn">Save Log</button>
+        </div>
+
+        <div id="netPane" class="pane">
+            <div style="font-size:11px; opacity:0.7; margin-bottom:5px;">LIVE TRAFFIC</div>
+            <div id="netList"></div>
+        </div>
+
         <div id="toolsPane" class="pane">
-            <input type="text" id="gFind" placeholder="Search files..." style="width:100%; padding:5px; margin-bottom:5px;">
-            <button class="btn-p" style="width:100%" id="searchBtn">Deep Search</button>
-            <div id="searchResults" style="margin-top:10px; font-size:11px;"></div>
+            <b style="font-size:11px;">GLOBAL REPLACE</b>
+            <input type="text" id="gFind" placeholder="Find...">
+            <input type="text" id="gReplace" placeholder="Replace...">
+            <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
+            <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
+            <b style="font-size:11px;">THEME</b>
+            <button onclick="document.body.className='gemini'" style="width:100%">Gemini Light</button>
+            <button onclick="document.body.className='midnight'" style="width:100%">Midnight Dark</button>
         </div>
     </div>
 
@@ -148,7 +181,7 @@
         </div>
         <div id="console-container">
             <div class="c-toolbar" onclick="toggleConsole()">
-                <span>CONSOLE OUTPUT</span>
+                <span>CONSOLE</span>
                 <span>▼</span>
             </div>
             <div id="console"></div>
@@ -164,61 +197,58 @@
     const lNums = document.getElementById('line-numbers');
     const con = document.getElementById('console');
 
-    // --- SCROLL SYNC FIX ---
+    // --- TAB LOGIC ---
+    function tab(id) {
+        document.querySelectorAll('.tab, .pane').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
+        document.getElementById(id+'Pane').classList.add('active');
+    }
+
+    // --- EDITOR SYNC ---
     editor.onscroll = () => {
         high.scrollTop = editor.scrollTop;
         high.scrollLeft = editor.scrollLeft;
         lNums.scrollTop = editor.scrollTop;
     };
-
-    // --- SYNTAX HIGHLIGHTING ---
+    
     const updateHigh = (text) => {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         code = code.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
         code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
         code = code.replace(/"(.*?)"/g, '<span class="t-str">"$1"</span>');
-        hContent.innerHTML = code + "\n"; 
+        hContent.innerHTML = code + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
     };
     editor.oninput = () => updateHigh(editor.value);
 
-    // --- LOGGING ---
+    // --- OPFS INIT ---
     const log = (m, type='info') => {
-        const d = document.createElement('div');
-        d.textContent = `> ${m}`;
-        if(type==='err') d.style.color = '#ff6b6b';
-        if(type==='ok') d.style.color = '#51cf66';
+        const d = document.createElement('div'); d.textContent = `> ${m}`;
+        if(type==='err') d.style.color = 'var(--danger)';
+        if(type==='ok') d.style.color = 'var(--success)';
         con.appendChild(d); con.scrollTop = con.scrollHeight;
     };
 
-    // --- OPFS INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
             try { await rootHandle.getFileHandle('vuln_db.json'); }
-            catch { 
-                const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
-                const w = await fh.createWritable(); await w.write("[]"); await w.close();
-            }
+            catch { const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true}); const w = await fh.createWritable(); await w.write("[]"); await w.close(); }
             await buildTree();
-            enableControls();
+            document.querySelectorAll('button').forEach(b => b.disabled = false);
             loadDB();
-            log("System Mounted.", "ok");
+            log("System Initialized.", "ok");
         } catch(e) { log(e.message, 'err'); }
     };
-
-    function enableControls() {
-        document.querySelectorAll('button').forEach(b => b.disabled = false);
-    }
 
     // --- FILE TREE ---
     async function buildTree() {
         const root = document.getElementById('tree-root');
         root.innerHTML = "";
         for await (const e of rootHandle.values()) {
+            if(e.name === 'vuln_db.json') continue; // Hide DB file
             const div = document.createElement('div');
-            div.style.padding = "4px 8px";
-            div.style.cursor = "pointer";
+            div.className = 'tree-row';
             div.innerHTML = e.kind === 'directory' ? `📁 ${e.name}` : `📄 ${e.name}`;
             div.onclick = () => { if(e.kind==='file') loadFile(e); };
             root.appendChild(div);
@@ -233,28 +263,47 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- RUN IN WINDOW ---
+    // --- RUN & NET ---
     document.getElementById('runBtn').onclick = () => {
-        const win = window.open("", "_blank");
-        win.document.write(editor.value);
-        win.document.close();
-        log("Opened in new window.", "ok");
+        const hook = `<script>
+            (function(){
+                const send=(t,d)=>window.opener.postMessage({type:t,...d},'*');
+                console.log=function(){send('console',{msg:Array.from(arguments).join(' ')})};
+                window.onerror=(m)=>send('console',{msg:'ERR: '+m});
+                const of=window.fetch;
+                window.fetch=async(...a)=>{
+                    try{const r=await of.apply(this,a); send('network',{m:'GET',u:a[0].url||a[0],s:r.status}); return r;}
+                    catch(e){send('network',{m:'GET',u:a[0],s:'ERR'}); throw e;}
+                }
+            })();
+        <\/script>`;
+        const blob = new Blob([hook + editor.value], {type:'text/html'});
+        window.open(URL.createObjectURL(blob), '_blank');
+        log("Run in new window.", "ok");
     };
 
-    // --- AUDIT & DB ---
+    window.addEventListener('message', (e) => {
+        if(e.data.type === 'network') {
+            const d = document.createElement('div'); d.className='net-item';
+            d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`;
+            document.getElementById('netList').prepend(d);
+        }
+        if(e.data.type === 'console') log(e.data.msg);
+    });
+
+    // --- AUDIT & DB (FIXED) ---
     document.getElementById('auditBtn').onclick = async () => {
         log("Scanning...", "warn");
         const findings = [];
         for await (const e of rootHandle.values()) {
-            if(e.kind === 'file' && e.name.endsWith('.html')) {
+            if(e.kind==='file' && e.name.endsWith('.html')) {
                 const t = await (await e.getFile()).text();
-                if(t.includes('innerHTML')) findings.push({t:"XSS Risk", d:`In: ${e.name}`});
-                if(t.includes('http:')) findings.push({t:"Insecure HTTP", d:`In: ${e.name}`});
+                if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`innerHTML in ${e.name}`});
             }
         }
         
         if(findings.length > 0) {
-            log(`Found ${findings.length} issues.`, "err");
+            log(`Found ${findings.length} issues. Saving...`, "err");
             const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
             const old = await (await fh.getFile()).text();
             const db = old ? JSON.parse(old) : [];
@@ -272,15 +321,50 @@
             const txt = await (await fh.getFile()).text();
             const list = document.getElementById('dbList');
             list.innerHTML = "";
-            JSON.parse(txt).forEach(x => {
-                list.innerHTML += `<div class="db-entry"><b>${x.t}</b><br>${x.d}</div>`;
+            const data = txt ? JSON.parse(txt) : [];
+            if(data.length === 0) list.innerHTML = "<div style='font-size:11px; opacity:0.5'>(Empty)</div>";
+            else data.forEach(x => {
+                list.innerHTML += `<div class="db-entry"><div class="db-title">${x.title}</div><div class="db-desc">${x.desc}</div></div>`;
             });
-        } catch(e){}
+        } catch(e){ log("DB Load Error", "err"); }
     }
 
+    document.getElementById('addDbEntryBtn').onclick = async () => {
+        const title = document.getElementById('dbTitle').value;
+        const desc = document.getElementById('dbDesc').value;
+        if(!title) return;
+        const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
+        const t = await (await fh.getFile()).text();
+        const data = t ? JSON.parse(t) : [];
+        data.push({title, desc});
+        const w = await fh.createWritable(); await w.write(JSON.stringify(data)); await w.close();
+        loadDB();
+    };
+
+    // --- SEARCH ---
+    document.getElementById('deepSearchBtn').onclick = async () => {
+        const q = document.getElementById('deepSearchInput').value;
+        const res = document.getElementById('searchResults');
+        res.innerHTML = "";
+        if(!q) return;
+        for await (const e of rootHandle.values()) {
+            if(e.kind==='file') {
+                const t = await (await e.getFile()).text();
+                if(t.includes(q)) {
+                    const d = document.createElement('div');
+                    d.className = 'search-res'; d.textContent = `Found in: ${e.name}`;
+                    d.onclick = () => loadFile(e);
+                    res.appendChild(d);
+                }
+            }
+        }
+        if(res.children.length===0) res.innerHTML = "<div style='font-size:11px'>No matches.</div>";
+    };
+
+    // --- DEMO & SAVE ---
     document.getElementById('demoBtn').onclick = async () => {
         const name = "vuln_demo.html";
-        const content = `<html><body><script>document.body.innerHTML="<h1>XSS</h1>"; fetch('http://bad.com');<\/script></body></html>`;
+        const content = `<html><body><h1>XSS</h1><script>document.body.innerHTML="Bad"; fetch('/track');<\/script></body></html>`;
         const fh = await rootHandle.getFileHandle(name, {create:true});
         const w = await fh.createWritable(); await w.write(content); await w.close();
         buildTree();
@@ -295,17 +379,13 @@
         }
     };
 
-    document.getElementById('newFileBtn').onclick = async () => {
-        const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(); }
-    };
-
-    function tab(id) {
-        document.querySelectorAll('.tab, .pane').forEach(e => e.classList.remove('active'));
-        document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
-        document.getElementById(id+'Pane').classList.add('active');
-    }
-    
     function toggleConsole() { document.getElementById('console-container').classList.toggle('minimized'); }
+    document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(); }};
+    document.getElementById('backupBtn').onclick = async () => {
+        const zip = new JSZip();
+        for await (const e of rootHandle.values()) { if(e.kind==='file') zip.file(e.name, await e.getFile()); }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
+    };
 </script>
 </body>
 </html>
