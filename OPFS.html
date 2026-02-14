@@ -2,54 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.3: Verified Audit & DB</title>
+    <title>IDE v9.4: Gemini Theme & Security Suite</title>
     <style>
         :root {
+            /* Default (One Dark-ish) */
             --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
             --sidebar-bg: #fff; --sidebar-text: #333; --editor-bg: #282c34; --editor-text: #abb2bf;
-            --line-num-bg: #21252b; --line-num-text: #636d83; --success: #42b72a; --danger: #f48771; --warn: #eab308;
+            --line-num-bg: #21252b; --line-num-text: #636d83; 
+            --tag: #e06c75; --attr: #d19a66; --str: #98c379; --key: #c678dd;
+            --success: #42b72a; --danger: #f48771; --warn: #eab308;
         }
-        body.midnight { --editor-bg: #000; --sidebar-bg: #111; --sidebar-text: #0f0; --border: #333; --header-bg: #000; --header-text: #0f0; --line-num-bg: #000; --line-num-text: #0f0; }
-        body.light { --editor-bg: #fff; --editor-text: #222; --sidebar-bg: #f8f9fa; --border: #ccc; --line-num-bg: #f0f0f0; --line-num-text: #999; }
-
-        body { font-family: system-ui, sans-serif; margin: 0; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { background: var(--header-bg); color: var(--header-text); padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 45px; flex-shrink: 0; }
         
-        .controls { padding: 8px 15px; background: #fff; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+        /* MIDNIGHT THEME */
+        body.midnight { 
+            --editor-bg: #000; --sidebar-bg: #111; --sidebar-text: #0f0; --border: #333; 
+            --header-bg: #000; --header-text: #0f0; --line-num-bg: #000; --line-num-text: #0f0;
+            --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0; --primary: #0f0;
+        }
+
+        /* GEMINI BLUE THEME (New) */
+        body.gemini {
+            --primary: #1a73e8; /* Google Blue */
+            --header-bg: #f0f4f9; --header-text: #1f1f1f;
+            --sidebar-bg: #f8f9fa; --sidebar-text: #3c4043; --border: #dadce0;
+            --editor-bg: #f0f4f9; /* Light Blue/Grey */
+            --editor-text: #1f1f1f;
+            --line-num-bg: #e1e5ea; --line-num-text: #5f6368;
+            /* High Contrast Syntax for Light Mode */
+            --tag: #1a73e8; /* Blue */
+            --attr: #d93025; /* Red */
+            --str: #188038; /* Green */
+            --key: #a142f4; /* Purple */
+        }
+
+        body { font-family: 'Google Sans', system-ui, sans-serif; margin: 0; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        header { background: var(--header-bg); color: var(--header-text); padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 45px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+        
+        .controls { padding: 8px 15px; background: var(--sidebar-bg); border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         
-        .sidebar { width: 350px; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar { width: 350px; background: var(--sidebar-bg); color: var(--sidebar-text); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .tab-row { display: flex; background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); }
-        .tab { flex: 1; padding: 10px 5px; text-align: center; cursor: pointer; font-size: 9px; font-weight: bold; color: #666; transition: 0.2s; }
-        .tab.active { background: var(--sidebar-bg); color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .tab { flex: 1; padding: 10px 5px; text-align: center; cursor: pointer; font-size: 9px; font-weight: bold; color: inherit; opacity: 0.7; transition: 0.2s; }
+        .tab.active { background: var(--sidebar-bg); color: var(--primary); border-bottom: 2px solid var(--primary); opacity: 1; }
         .pane { display: none; flex: 1; flex-direction: column; padding: 12px; overflow-y: auto; }
         .pane.active { display: flex; }
 
-        /* Tree UI */
+        /* Tree UI & Drag Styles */
         .tree-root-node { font-weight: bold; color: var(--primary); margin-bottom: 5px; font-size: 11px; padding: 0 8px; }
         .tree-item { margin-left: 18px; border-left: 1px solid rgba(0,0,0,0.1); }
         .tree-row { display: flex; align-items: center; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; user-select: none; border: 1px solid transparent; }
         .tree-row:hover { background: rgba(0,0,0,0.05); }
-        .tree-row.active { background: #e7f3ff; color: var(--primary); font-weight: 600; }
+        .tree-row.active { background: rgba(24, 119, 242, 0.1); color: var(--primary); font-weight: 600; }
         .drag-over { background: rgba(24, 119, 242, 0.1); border: 1px dashed var(--primary); }
         .folder-icon { margin-right: 6px; font-size: 10px; width: 12px; display: inline-block; transition: transform 0.1s; }
 
-        /* DB Entry Styles */
-        .db-entry { background: #fff; border: 1px solid #ccc; border-left: 3px solid var(--danger); border-radius: 4px; padding: 8px; margin-bottom: 8px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .db-title { font-weight: bold; font-size: 12px; color: #333; margin-bottom: 4px; }
-        .db-desc { font-size: 11px; color: #666; margin-bottom: 4px; line-height: 1.4; }
-        .db-meta { font-size: 9px; color: #999; text-align: right; }
+        /* DB & Inputs */
+        .db-entry { background: rgba(255,255,255,0.8); border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: 8px; padding: 10px; margin-bottom: 8px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .db-title { font-weight: bold; font-size: 12px; color: var(--sidebar-text); margin-bottom: 4px; }
+        .db-desc { font-size: 11px; color: var(--sidebar-text); opacity: 0.8; margin-bottom: 4px; line-height: 1.4; }
+        .db-meta { font-size: 9px; opacity: 0.5; text-align: right; }
+        .db-input, input[type="text"] { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; box-sizing: border-box; background: #fff; color: #333; }
         
-        .net-item { font-size: 11px; padding: 6px; border-bottom: 1px solid #eee; font-family: monospace; }
-
         /* Workspace */
-        .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; background: #ccc; overflow: hidden; }
+        .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; background: var(--border); overflow: hidden; }
         .panes { display: grid; grid-template-columns: 1fr; gap: 1px; height: 100%; min-height: 0; }
         .editor-container { position: relative; background: var(--editor-bg); display: flex; overflow: hidden; }
-        #line-numbers { width: 40px; background: var(--line-num-bg); color: var(--line-num-text); padding: 15px 5px; text-align: right; font-family: monospace; font-size: 13px; line-height: 1.6; user-select: none; }
+        #line-numbers { width: 45px; background: var(--line-num-bg); color: var(--line-num-text); padding: 15px 5px; text-align: right; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; user-select: none; border-right: 1px solid var(--border); }
         .editor-stack { flex: 1; position: relative; overflow: hidden; }
         #editor, #highlighting { margin: 0; padding: 15px; border: 0; width: 100%; height: 100%; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; white-space: pre; position: absolute; top: 0; left: 0; box-sizing: border-box; overflow: auto; outline: none; }
-        #editor { color: transparent; background: transparent; caret-color: #fff; z-index: 2; resize: none; }
+        #editor { color: transparent; background: transparent; caret-color: var(--editor-text); z-index: 2; resize: none; }
         #highlighting { color: var(--editor-text); z-index: 1; pointer-events: none; }
         
         #console-container { display: flex; flex-direction: column; background: #1e1e1e; border-top: 2px solid #333; height: 140px; transition: height 0.2s; flex-shrink: 0; }
@@ -57,29 +79,38 @@
         .c-toolbar { background: #252526; padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 10px; font-weight: bold; cursor: pointer; }
         #console { flex: 1; color: #d4d4d4; padding: 10px; font-family: monospace; font-size: 11px; overflow-y: auto; }
         
-        button { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; font-size: 11px; background: #e4e6eb; margin-top:4px; }
+        /* Buttons */
+        button { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 11px; background: #e4e6eb; margin-top:4px; color: #3c4043; transition: 0.1s; }
+        button:hover { filter: brightness(0.95); }
         .btn-blue { background: var(--primary); color: white; }
         .btn-run { background: var(--success); color: white; }
         .btn-warn { background: var(--warn); color: #000; }
         .btn-demo { background: #9c27b0; color: white; }
         .btn-red { background: var(--danger); color: white; }
+        
+        /* Syntax Colors (Dynamic) */
+        .t-tag { color: var(--tag); font-weight: bold; } 
+        .t-attr { color: var(--attr); } 
+        .t-str { color: var(--str); } 
+        .t-key { color: var(--key); font-weight: bold; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <header>
-    <div>Local IDE v9.3 (OPFS)</div>
+    <div style="font-weight:700;">Gemini IDE v9.4 (OPFS)</div>
     <div id="file-label" style="font-size: 11px; opacity: 0.7;">System Ready</div>
 </header>
 
 <div class="controls">
     <button class="btn-blue" id="mountBtn">Initialize</button>
     <button class="btn-red" id="wipeBtn" disabled>Wipe</button>
-    <div style="width:1px; height:20px; background:#ddd; margin:0 5px;"></div>
+    <div style="width:1px; height:20px; background:#ccc; margin:0 8px;"></div>
     <button class="btn-demo" id="demoBtn" disabled>⚡ Load Demo</button>
-    <button class="btn-run" id="runBtn" disabled>▶ Run in Window</button>
-    <button class="btn-warn" id="auditBtn" disabled>🛡️ Audit & Log</button>
+    <button class="btn-run" id="runBtn" disabled>▶ Run</button>
+    <button class="btn-warn" id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
     <button id="newFolderBtn" disabled>+ Folder</button>
@@ -96,25 +127,40 @@
         </div>
         
         <div id="explorerPane" class="pane active">
+            <input type="text" id="fileFilter" placeholder="Filter filenames..." style="margin-bottom:10px;">
             <div id="tree-root-header" class="tree-root-node"></div>
             <div id="tree-root"></div>
         </div>
 
         <div id="dbPane" class="pane">
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <b style="font-size:11px;">VULNERABILITY DATABASE</b>
-                <span onclick="loadDB()" style="cursor:pointer; color:var(--primary); font-size:10px;">REFRESH</span>
-            </div>
-            <div id="dbList" style="font-size:11px;">(No entries yet)</div>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:10px; color:var(--primary);">VULNERABILITY DB</div>
+            <input type="text" id="dbTitle" placeholder="Title...">
+            <input type="text" id="dbDesc" placeholder="Description...">
+            <input type="text" id="dbMit" placeholder="Fix...">
+            <button class="btn-blue" id="addDbEntryBtn" style="width:100%;">Add Entry</button>
+            <div id="dbList" style="margin-top:10px; font-size:11px;"></div>
         </div>
 
         <div id="networkPane" class="pane">
-            <div style="font-size: 10px; color: #888; margin-bottom: 10px;">TRAFFIC MONITOR</div>
+            <div style="font-size: 10px; opacity:0.7; margin-bottom: 10px;">TRAFFIC MONITOR</div>
             <div id="netList"></div>
         </div>
 
         <div id="toolsPane" class="pane">
-            <button onclick="setTheme('')" style="width:100%; margin-bottom:5px;">One Dark</button>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
+            <input type="text" id="searchAll" placeholder="Search in all files...">
+            <button class="btn-blue" id="searchAllBtn" style="width:100%; margin-bottom:10px;">Find All</button>
+            <div id="searchResults" style="max-height: 200px; overflow-y: auto; margin-bottom:15px; border:1px solid var(--border); background:var(--sidebar-bg);"></div>
+
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
+            <input type="text" id="gFind" placeholder="Find text...">
+            <input type="text" id="gReplace" placeholder="Replace with...">
+            <button class="btn-blue" id="gReplaceBtn" style="width:100%;">Replace All</button>
+            
+            <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEMES</div>
+            <button onclick="setTheme('gemini')" style="width:100%; margin-bottom:5px; background:#e8f0fe; color:#1a73e8; border:1px solid #d2e3fc;">Gemini Blue</button>
+            <button onclick="setTheme('')" style="width:100%; margin-bottom:5px;">One Dark (Default)</button>
             <button onclick="setTheme('midnight')" style="width:100%; background:#000; color:#0f0;">Midnight</button>
         </div>
     </div>
@@ -137,15 +183,15 @@
                     <span id="toggleIcon">▼</span>
                 </span>
             </div>
-            <div id="console">> IDE Ready. v9.3</div>
+            <div id="console">> IDE Ready. Select 'Gemini Blue' in Tools for light mode.</div>
         </div>
     </div>
 </div>
 
 <script>
     let rootHandle, currentFileHandle;
-    let runWindow = null;
     let draggedItem = null;
+    let runWindow = null;
     
     const editor = document.getElementById('editor');
     const hContent = document.getElementById('h-content');
@@ -166,71 +212,46 @@
     function setTheme(t) { document.body.className = t; }
     function toggleConsole() {
         const c = document.getElementById('console-container');
+        const i = document.getElementById('toggleIcon');
         c.classList.toggle('minimized');
+        i.textContent = c.classList.contains('minimized') ? '▲' : '▼';
     }
 
-    // --- INIT & OPFS ---
+    // --- INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
             document.getElementById('tree-root-header').textContent = `📁 OPFS://ROOT`;
             
-            // Allow Drop on Root
-            const rootHeader = document.getElementById('tree-root-header');
-            rootHeader.ondragover = e => { e.preventDefault(); rootHeader.style.background = '#e7f3ff'; };
-            rootHeader.ondragleave = () => rootHeader.style.background = 'transparent';
-            rootHeader.ondrop = async e => {
-                e.preventDefault(); rootHeader.style.background = 'transparent';
+            const header = document.getElementById('tree-root-header');
+            header.ondragover = e => { e.preventDefault(); header.style.background = 'var(--line-num-bg)'; };
+            header.ondragleave = () => header.style.background = 'transparent';
+            header.ondrop = async e => {
+                e.preventDefault(); header.style.background = 'transparent';
                 if(!draggedItem || draggedItem.parent === rootHandle) return;
                 try { await moveEntry(draggedItem.name, draggedItem.parent, rootHandle, draggedItem.kind); await buildTree(rootHandle, document.getElementById('tree-root')); }
                 catch(err){ log("Move failed.", "var(--danger)"); }
             };
 
             await buildTree(rootHandle, document.getElementById('tree-root'));
-            enableControls();
+            ['newFileBtn','newFolderBtn','backupBtn','wipeBtn','saveBtn','runBtn','demoBtn','auditBtn'].forEach(i=>document.getElementById(i).disabled=false);
             
-            // Auto-Initialize DB File if missing
-            try {
-                await rootHandle.getFileHandle('vulnerabilities.json');
-            } catch {
+            // Init DB
+            try { await rootHandle.getFileHandle('vulnerabilities.json'); } 
+            catch {
                 const fh = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
                 const w = await fh.createWritable(); await w.write("[]"); await w.close();
-                log("Initialized empty DB file.", "var(--primary)");
             }
-            
             loadDB();
             log("OPFS Mounted.", "var(--success)");
         } catch(e) { log("OPFS Error: " + e.message, "var(--danger)"); }
     };
 
-    function enableControls() {
-        ['newFileBtn','newFolderBtn','backupBtn','wipeBtn','saveBtn','runBtn','demoBtn','auditBtn'].forEach(i=>document.getElementById(i).disabled=false);
-    }
-
-    // --- DEMO CREATION ---
-    document.getElementById('demoBtn').onclick = async () => {
-        const name = "vulnerable_demo.html";
-        const content = `<!DOCTYPE html><html><body><h1>XSS Test</h1><div id="out"></div><script>
-        const url="http://unsafe.com"; document.getElementById('out').innerHTML="Link: "+url; fetch(url);
-        <\/script></body></html>`;
-        try { 
-            const h = await rootHandle.getFileHandle(name, {create:true}); 
-            const w = await h.createWritable(); await w.write(content); await w.close(); 
-            log("Demo created. Click Audit to scan.", "var(--success)"); 
-            await buildTree(rootHandle, document.getElementById('tree-root')); 
-        } catch(e) { log("Error: "+e.message, "var(--danger)"); }
-    };
-
-    // --- AUDIT & AUTO-LOGGING ---
+    // --- AUDIT & LOGGING ---
     document.getElementById('auditBtn').onclick = async () => {
-        log("Starting Scan...", "var(--warn)");
+        log("Scanning...", "var(--warn)");
         let findings = [];
-        
-        // Patterns
-        const patterns = [
-            { id: "XSS", r: /\.innerHTML/, sev: "High" }, // Relaxed regex
-            { id: "HTTP", r: /http:\/\//, sev: "Medium" }
-        ];
+        const patterns = [{ id: "XSS", r: /\.innerHTML/, sev: "High" }, { id: "HTTP", r: /http:\/\//, sev: "Medium" }];
 
         async function scan(h) {
             for await (const e of h.values()) {
@@ -238,7 +259,6 @@
                 else {
                     if(e.name === 'vulnerabilities.json') continue;
                     const t = await (await e.getFile()).text();
-                    log(`Scanning ${e.name}...`);
                     patterns.forEach(p => {
                         if(p.r.test(t)) {
                             findings.push({ title: p.id + " Detected", desc: `Found in ${e.name}`, date: new Date().toISOString() });
@@ -252,32 +272,15 @@
 
         if(findings.length > 0) {
             document.getElementById('mitigateBtn').style.display='inline';
-            
-            // 1. Update UI Immediately (Memory)
             renderDB(findings); 
-            
-            // 2. Persist to Disk
             try {
                 const fh = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
-                // Read existing
                 let current = [];
-                try {
-                    const txt = await (await fh.getFile()).text();
-                    if(txt) current = JSON.parse(txt);
-                } catch(e) { current = []; }
-                
-                // Append
-                const updated = [...current, ...findings];
-                
-                // Write
-                const w = await fh.createWritable(); 
-                await w.write(JSON.stringify(updated, null, 2)); 
-                await w.close();
-                log(`Logged ${findings.length} issues to DB file.`, "var(--success)");
-            } catch(e) { log("DB Write Failed: " + e.message, "var(--danger)"); }
-        } else {
-            log("Clean scan. No issues found.", "var(--success)");
-        }
+                try { const txt = await (await fh.getFile()).text(); if(txt) current = JSON.parse(txt); } catch(e){}
+                const w = await fh.createWritable(); await w.write(JSON.stringify([...current, ...findings], null, 2)); await w.close();
+                log("Findings logged to DB.", "var(--success)");
+            } catch(e) { log("DB Write Failed.", "var(--danger)"); }
+        } else { log("No issues.", "var(--success)"); }
     };
 
     function renderDB(data) {
@@ -285,12 +288,7 @@
         list.innerHTML = "";
         if(data.length === 0) { list.innerHTML = "(No entries)"; return; }
         data.forEach(e => {
-            list.innerHTML += `
-            <div class="db-entry">
-                <div class="db-title">${e.title}</div>
-                <div class="db-desc">${e.desc}</div>
-                <div class="db-meta">${new Date(e.date).toLocaleTimeString()}</div>
-            </div>`;
+            list.innerHTML += `<div class="db-entry"><div class="db-meta">${new Date(e.date).toLocaleTimeString()}</div><div class="db-title">${e.title}</div><div class="db-desc">${e.desc}</div></div>`;
         });
     }
 
@@ -298,18 +296,61 @@
         try {
             const fh = await rootHandle.getFileHandle('vulnerabilities.json');
             const txt = await (await fh.getFile()).text();
-            const data = txt ? JSON.parse(txt) : [];
-            renderDB(data);
-        } catch(e) { /* Ignore read errors on init */ }
+            renderDB(txt ? JSON.parse(txt) : []);
+        } catch(e) {}
     }
+
+    document.getElementById('addDbEntryBtn').onclick = async () => {
+        const title = document.getElementById('dbTitle').value;
+        const desc = document.getElementById('dbDesc').value;
+        if(!title) return;
+        const fh = await rootHandle.getFileHandle('vulnerabilities.json', {create:true});
+        const t = await (await fh.getFile()).text();
+        const data = t ? JSON.parse(t) : [];
+        data.push({title, desc, date: new Date().toISOString()});
+        const w = await fh.createWritable(); await w.write(JSON.stringify(data, null, 2)); await w.close();
+        loadDB();
+    };
 
     function applyMitigation() {
         editor.value = editor.value.replace(/\.innerHTML\s*=/g, ".textContent =").replace(/http:\/\//g, "https://");
         hContent.innerHTML = applyHighlight(editor.value) + "\n";
-        log("Mitigation applied.", "var(--success)");
+        log("Patched.", "var(--success)");
     }
 
-    // --- FILE SYSTEM (Drag/Drop/Tree) ---
+    // --- STANDARD UTILS ---
+    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
+
+    document.getElementById('searchAllBtn').onclick = async () => {
+        const q = document.getElementById('searchAll').value.toLowerCase();
+        const res = document.getElementById('searchResults');
+        res.innerHTML = "<div>Scanning...</div>";
+        if(!q || !rootHandle) return;
+        let found = 0;
+        async function scan(h, path="") {
+            for await (const e of h.values()) {
+                if(e.kind==='directory') await scan(e, path + e.name + "/");
+                else {
+                    const txt = await (await e.getFile()).text();
+                    const lines = txt.split('\n');
+                    lines.forEach((l, i) => {
+                        if(l.toLowerCase().includes(q)) {
+                            found++;
+                            const d = document.createElement('div');
+                            d.className = 'search-result';
+                            d.innerHTML = `<b>${e.name}</b> <span class="match-line">L${i+1}</span> ${l.trim().substring(0,25)}...`;
+                            d.onclick = () => loadFile(e);
+                            if(found === 1) res.innerHTML = "";
+                            res.appendChild(d);
+                        }
+                    });
+                }
+            }
+        }
+        await scan(rootHandle);
+        if(found === 0) res.innerHTML = "<div>No matches found.</div>";
+    };
+
     async function moveEntry(name, src, dest, kind) {
         if(kind==='file') {
             const f = await (await src.getFileHandle(name)).getFile();
@@ -323,21 +364,17 @@
         }
     }
 
-    async function buildTree(handle, container) {
+    async function buildTree(handle, container, filter = "") {
         container.innerHTML = "";
         const entries = []; for await (const e of handle.values()) entries.push(e);
         entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
-        
         if(entries.length===0) { container.innerHTML="<div style='padding:5px; color:#999; font-size:10px;'>(empty)</div>"; return; }
-
         for (const entry of entries) {
+            if(filter && entry.kind==='file' && !entry.name.toLowerCase().includes(filter.toLowerCase())) continue;
             const row = document.createElement('div');
             row.className = `tree-row ${currentFileHandle?.name === entry.name ? 'active' : ''}`;
-            
-            // Drag Logic
             row.draggable = true;
             row.ondragstart = e => { e.stopPropagation(); draggedItem = {name:entry.name, kind:entry.kind, parent:handle}; };
-
             if(entry.kind === 'directory') {
                 row.innerHTML = `<span class="folder-icon">▶</span> 📁 ${entry.name}`;
                 row.ondragover = e => { e.preventDefault(); e.stopPropagation(); row.classList.add('drag-over'); };
@@ -351,15 +388,15 @@
                         await buildTree(rootHandle, document.getElementById('tree-root'));
                     } catch(err) { log("Move failed.", "var(--danger)"); }
                 };
-                
-                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = 'none';
+                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = filter ? 'block' : 'none';
                 row.onclick = e => {
                     e.stopPropagation();
                     const icon = row.querySelector('.folder-icon');
-                    if(sub.style.display==='none'){ sub.style.display='block'; icon.style.transform='rotate(90deg)'; buildTree(entry, sub); }
+                    if(sub.style.display==='none'){ sub.style.display='block'; icon.style.transform='rotate(90deg)'; buildTree(entry, sub, filter); }
                     else { sub.style.display='none'; icon.style.transform='rotate(0deg)'; }
                 };
                 container.appendChild(row); container.appendChild(sub);
+                if(filter) buildTree(entry, sub, filter);
             } else {
                 row.innerHTML = `📄 ${entry.name}`;
                 row.onclick = e => { e.stopPropagation(); loadFile(entry); };
@@ -376,7 +413,6 @@
         lineNumbers.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>');
     }
 
-    // --- RUN & UTILS ---
     function sanitize(text) { return text.replace(/<span class="t-[a-z]+">/gi, "").replace(/<\/span>/gi, "").replace(/##[A-Z_]+##/g, ""); }
     function applyHighlight(text) {
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -387,12 +423,20 @@
         return code.replace(/##T_S##/g, '<span class="t-tag">').replace(/##T_E##/g, '</span>').replace(/##A_S##/g, '<span class="t-attr">').replace(/##A_E##/g, '</span>').replace(/##S_S##/g, '<span class="t-str">').replace(/##S_E##/g, '</span>').replace(/##K_S##/g, '<span class="t-key">').replace(/##K_E##/g, '</span>');
     }
 
+    document.getElementById('demoBtn').onclick = async () => {
+        const name = "vulnerable_demo.html";
+        const content = `<!DOCTYPE html><html><body><h1>XSS Test</h1><div id="out"></div><script>
+        const url="http://unsafe.com"; document.getElementById('out').innerHTML="Link: "+url; fetch(url);
+        <\/script></body></html>`;
+        try { const h = await rootHandle.getFileHandle(name, {create:true}); const w = await h.createWritable(); await w.write(content); await w.close(); log("Demo created.", "var(--success)"); await buildTree(rootHandle, document.getElementById('tree-root')); } catch(e){}
+    };
+
     document.getElementById('runBtn').onclick = () => {
         if(runWindow && !runWindow.closed) runWindow.close();
         const hook = `<script>(function(){const netLog=(d)=>window.opener.postMessage({type:'network',...d},'*');const log=(m,a)=>window.opener.postMessage({type:'console',method:m,args:Array.from(a).map(String)},'*');console.log=function(){log('log',arguments)};console.error=function(){log('error',arguments)};window.onerror=(m)=>log('error',[m]);const originalFetch=window.fetch;window.fetch=async(...args)=>{const u=args[0]instanceof Request?args[0].url:args[0];const m=(args[1]&&args[1].method)||'GET';try{const r=await originalFetch.apply(this,args);netLog({url:u,method:m,status:r.status});return r}catch(e){netLog({url:u,method:m,status:'BLOCKED'});throw e}}})();<\/script>`;
         const blob = new Blob([`<html><head><title>Run Preview</title></head><body>${hook}${sanitize(editor.value)}</body></html>`], {type: 'text/html'});
         runWindow = window.open(URL.createObjectURL(blob), '_blank');
-        log("Launched in new window.", "var(--primary)");
+        log("Launched.", "var(--primary)");
     };
 
     window.addEventListener('message', (e) => {
@@ -408,6 +452,13 @@
         const w = await currentFileHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.");
     };
     
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
+        if(!f || !rootHandle) return;
+        async function run(h) { for await (const e of h.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
+        await run(rootHandle); log("Replaced.");
+    };
+
     document.getElementById('backupBtn').onclick = async () => {
         const zip = new JSZip();
         async function walk(h, folder) { for await (const e of h.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
