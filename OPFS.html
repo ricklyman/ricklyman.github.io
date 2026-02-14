@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v9.8: Fixed Tree & Tools</title>
+    <title>IDE v9.9: Fixed Tree & Unified Tools</title>
     <style>
+        /* --- THEME & VARIABLES --- */
         :root {
             --bg: #f0f4f9; --text: #1f1f1f; --sidebar: #ffffff; --border: #dfe3e7;
             --header: #ffffff; --header-text: #1f1f1f;
@@ -17,6 +18,7 @@
             --accent: #0f0; --tag: #0f0; --attr: #0a0; --str: #0f0; --key: #0f0; --comm: #006400;
         }
 
+        /* --- LAYOUT --- */
         body { margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
         header { 
@@ -24,16 +26,16 @@
             display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; 
         }
 
-        /* Fixed Controls Layout */
         .controls { 
-            padding: 8px 10px; background: var(--sidebar); border-bottom: 1px solid var(--border); 
-            display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; 
+            padding: 8px 15px; background: var(--sidebar); border-bottom: 1px solid var(--border); 
+            display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; 
         }
 
         .main-layout { display: flex; flex: 1; overflow: hidden; }
 
         .sidebar { width: 340px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         
+        /* 4 Tabs (Search merged into Tools) */
         .tab-row { display: flex; background: rgba(0,0,0,0.05); }
         .tab { 
             flex: 1; padding: 10px 0; text-align: center; font-size: 10px; font-weight: bold; 
@@ -51,11 +53,10 @@
         .tree-item { margin-left: 15px; border-left: 1px solid var(--border); }
         .folder-icon { width: 14px; text-align: center; display: inline-block; font-size: 10px; margin-right: 4px; }
 
-        /* DB Styles */
+        /* DB & Search Styles */
         .db-entry { padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); margin-bottom: 6px; background: rgba(255,255,255,0.5); border-radius: 4px; }
-        .db-title { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
-        .db-desc { font-size: 11px; opacity: 0.8; }
-        .db-input { width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+        .search-res { padding: 5px; border-bottom: 1px solid var(--border); font-size: 11px; cursor: pointer; }
+        .search-res:hover { background: rgba(0,0,0,0.05); }
 
         /* Workspace */
         .workspace { flex: 1; display: grid; grid-template-rows: 1fr auto; min-width: 0; background: var(--bg); }
@@ -69,21 +70,22 @@
         .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
 
-        button { padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; margin-top: 4px; }
+        /* UI Elements */
+        button { padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 11px; font-weight: bold; background: #fff; color: #333; }
         .btn-p { background: var(--accent); color: #fff; border: none; }
         .btn-d { background: var(--danger); color: #fff; border: none; }
-        .btn-sm { font-size: 10px; padding: 4px 8px; }
         input[type="text"] { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; }
         
         /* Syntax Colors */
         .t-tag { color: var(--tag); } .t-attr { color: var(--attr); } .t-str { color: var(--str); } .t-key { color: var(--key); font-weight: bold; }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="gemini">
 
 <header>
-    <div>IDE v9.8 <span style="opacity:0.5; font-weight:400;">(OPFS • Full Fix)</span></div>
+    <div>IDE v9.9 <span style="opacity:0.5; font-weight:400;">(Unified Tools)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -95,14 +97,15 @@
     <button id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
-    <button id="newFolderBtn" disabled>+ Folder</button> <button id="demoBtn" disabled>Demo</button>
-    <button id="backupBtn" disabled>💾 ZIP</button> </div>
+    <button id="newFolderBtn" disabled>+ Folder</button>
+    <button id="demoBtn" disabled>Demo</button>
+    <button id="backupBtn" disabled>💾 ZIP</button>
+</div>
 
 <div class="main-layout">
     <div class="sidebar">
         <div class="tab-row">
             <div class="tab active" onclick="tab('files')">FILES</div>
-            <div class="tab" onclick="tab('search')">SEARCH</div>
             <div class="tab" onclick="tab('db')">DB</div>
             <div class="tab" onclick="tab('net')">NET</div>
             <div class="tab" onclick="tab('tools')">TOOLS</div>
@@ -110,13 +113,6 @@
         
         <div id="filesPane" class="pane active">
             <div id="tree-root"></div>
-        </div>
-
-        <div id="searchPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">PROJECT SEARCH</div>
-            <input type="text" id="searchAll" placeholder="Search in all files...">
-            <button class="btn-p" style="width:100%" id="searchAllBtn">Find All</button>
-            <div id="searchResults" style="margin-top:10px;"></div>
         </div>
 
         <div id="dbPane" class="pane">
@@ -129,7 +125,7 @@
             <b style="font-size:11px;">ADD ENTRY</b>
             <input type="text" id="dbTitle" class="db-input" placeholder="Title...">
             <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
-            <button class="btn-p" style="width:100%" id="addDbEntryBtn">Save Entry</button>
+            <button class="btn-p" style="width:100%; margin-top:5px;" id="addDbEntryBtn">Save Entry</button>
         </div>
 
         <div id="netPane" class="pane">
@@ -138,6 +134,13 @@
         </div>
 
         <div id="toolsPane" class="pane">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH (FIND ALL)</div>
+            <input type="text" id="searchAll" placeholder="Search in all files...">
+            <button class="btn-p" style="width:100%" id="searchAllBtn">Search</button>
+            <div id="searchResults" style="margin-top:10px; max-height:120px; overflow-y:auto; border:1px solid var(--border);"></div>
+            
+            <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
+            
             <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
             <input type="text" id="gFind" placeholder="Find text...">
             <input type="text" id="gReplace" placeholder="Replace with...">
@@ -214,20 +217,24 @@
             catch { const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true}); const w = await fh.createWritable(); await w.write("[]"); await w.close(); }
             
             await buildTree(rootHandle, document.getElementById('tree-root'));
-            
             document.querySelectorAll('button').forEach(b => b.disabled = false);
             loadDB();
             log("System Initialized.", "ok");
         } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- RECURSIVE FILE TREE (FIXED) ---
+    // --- FILE TREE (FIXED RECURSION) ---
     async function buildTree(dirHandle, container) {
         container.innerHTML = "";
         const entries = [];
         for await (const e of dirHandle.values()) entries.push(e);
         entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
         
+        if(entries.length === 0) {
+            container.innerHTML = "<div style='font-size:10px; color:#999; padding-left:15px;'>(empty)</div>";
+            return;
+        }
+
         for (const e of entries) {
             if(e.name === 'vuln_db.json') continue; // Hide DB
             
@@ -246,7 +253,7 @@
                     if (sub.style.display === 'none') {
                         sub.style.display = 'block';
                         icon.innerHTML = '▼';
-                        await buildTree(e, sub); // Recursion!
+                        await buildTree(e, sub); // Recurse
                     } else {
                         sub.style.display = 'none';
                         icon.innerHTML = '▶';
@@ -270,37 +277,7 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- AUDIT & DB ---
-    document.getElementById('auditBtn').onclick = async () => {
-        log("Scanning...", "warn");
-        const findings = [];
-        
-        async function scan(dir) {
-            for await (const e of dir.values()) {
-                if(e.kind==='directory') await scan(e);
-                else {
-                    if(e.name === 'vuln_db.json') continue;
-                    const t = await (await e.getFile()).text();
-                    if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`Found in ${e.name}`});
-                    if(t.includes('http:')) findings.push({title:"Insecure HTTP", desc:`Found in ${e.name}`});
-                }
-            }
-        }
-        await scan(rootHandle);
-        
-        if(findings.length > 0) {
-            log(`Found ${findings.length} issues. Saving...`, "err");
-            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
-            const old = await (await fh.getFile()).text();
-            const db = old ? JSON.parse(old) : [];
-            const newDB = [...db, ...findings];
-            const w = await fh.createWritable();
-            await w.write(JSON.stringify(newDB));
-            await w.close();
-            loadDB();
-        } else { log("Clean scan.", "ok"); }
-    };
-
+    // --- DB FUNCTIONS ---
     async function loadDB() {
         try {
             const fh = await rootHandle.getFileHandle('vuln_db.json');
@@ -327,7 +304,7 @@
         loadDB();
     };
 
-    // --- SEARCH ---
+    // --- SEARCH & REPLACE (UNIFIED) ---
     document.getElementById('searchAllBtn').onclick = async () => {
         const q = document.getElementById('searchAll').value.toLowerCase();
         const res = document.getElementById('searchResults');
@@ -340,7 +317,7 @@
                     const t = await (await e.getFile()).text();
                     if(t.toLowerCase().includes(q)) {
                         const d = document.createElement('div');
-                        d.style.padding="4px"; d.style.cursor="pointer"; d.style.borderBottom="1px solid #eee";
+                        d.className = 'search-res';
                         d.innerHTML = `Found in: <b>${e.name}</b>`;
                         d.onclick = () => loadFile(e);
                         res.appendChild(d);
@@ -349,7 +326,14 @@
             }
         }
         await scan(rootHandle);
-        if(res.children.length===0) res.innerHTML = "No matches.";
+        if(res.children.length===0) res.innerHTML = "<div style='font-size:10px'>No matches.</div>";
+    };
+
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
+        if(!f) return;
+        async function run(dir) { for await (const e of dir.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
+        await run(rootHandle); log("Replaced.");
     };
 
     // --- UTILS ---
@@ -373,7 +357,7 @@
 
     window.addEventListener('message', (e) => {
         if(e.data.type === 'network') {
-            const d = document.createElement('div'); d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`; d.style.fontSize="11px"; d.style.borderBottom="1px solid #eee";
+            const d = document.createElement('div'); d.className='net-item'; d.textContent = `[${e.data.m}] ${e.data.u} (${e.data.s})`;
             document.getElementById('netList').prepend(d);
         }
         if(e.data.type === 'console') log(e.data.msg);
@@ -383,18 +367,37 @@
         if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }
     };
     
-    document.getElementById('gReplaceBtn').onclick = async () => {
-        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
-        if(!f) return;
-        async function run(dir) { for await (const e of dir.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
-        await run(rootHandle); log("Replaced.");
-    };
-
     document.getElementById('demoBtn').onclick = async () => {
         const h = await rootHandle.getFileHandle('demo.html', {create:true});
         const w = await h.createWritable(); await w.write('<h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script>'); await w.close();
         await buildTree(rootHandle, document.getElementById('tree-root'));
         log("Demo Created.", "ok");
+    };
+
+    document.getElementById('auditBtn').onclick = async () => {
+        log("Scanning...", "warn");
+        const findings = [];
+        async function scan(dir) {
+            for await (const e of dir.values()) {
+                if(e.kind==='directory') await scan(e);
+                else {
+                    if(e.name === 'vuln_db.json') continue;
+                    const t = await (await e.getFile()).text();
+                    if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`Found in ${e.name}`});
+                    if(t.includes('http:')) findings.push({title:"Insecure HTTP", desc:`Found in ${e.name}`});
+                }
+            }
+        }
+        await scan(rootHandle);
+        if(findings.length > 0) {
+            log(`Found ${findings.length} issues. Saving...`, "err");
+            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
+            const old = await (await fh.getFile()).text();
+            const db = old ? JSON.parse(old) : [];
+            const newDB = [...db, ...findings];
+            const w = await fh.createWritable(); await w.write(JSON.stringify(newDB)); await w.close();
+            loadDB();
+        } else { log("Clean scan.", "ok"); }
     };
 
     document.getElementById('backupBtn').onclick = async () => {
@@ -406,10 +409,7 @@
 
     document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
     document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); renderDB([]); }};
-
-    editor.oninput = () => { hContent.innerHTML = editor.value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "\n"; lNums.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>'); };
-    editor.onscroll = () => { hContent.parentElement.scrollTop = editor.scrollTop; hContent.parentElement.scrollLeft = editor.scrollLeft; lNums.scrollTop = editor.scrollTop; };
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); loadDB(); }};
 </script>
 </body>
 </html>
