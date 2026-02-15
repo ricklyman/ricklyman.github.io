@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v10.8: Sandboxed Syntax Fix</title>
+    <title>IDE v10.9: Atomic Syntax Engine</title>
     <style>
         /* --- GEMINI THEME --- */
         :root {
@@ -11,7 +11,7 @@
             --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
             
-            /* SYNTAX COLORS (Forced) */
+            /* SYNTAX COLORS (Verified) */
             --tag: #d93025;  /* Red */
             --attr: #e37400; /* Orange/Brown */
             --str: #188038;  /* Green */
@@ -93,7 +93,7 @@
         .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
 
-        /* SYNTAX CLASSES (With !important to prevent overriding) */
+        /* SYNTAX CLASSES (Strict) */
         .t-tag { color: var(--tag) !important; font-weight: 700; } 
         .t-attr { color: var(--attr) !important; } 
         .t-str { color: var(--str) !important; } 
@@ -107,7 +107,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v10.8 <span style="opacity:0.5; font-weight:400;">(Sandboxed Highlighting)</span></div>
+    <div>IDE v10.9 <span style="opacity:0.5; font-weight:400;">(Atomic Syntax)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -200,62 +200,61 @@
     const lNums = document.getElementById('line-numbers');
     const con = document.getElementById('console');
 
-    // --- TAB LOGIC ---
     function tab(id) {
         document.querySelectorAll('.tab, .pane').forEach(e => e.classList.remove('active'));
         document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
         document.getElementById(id+'Pane').classList.add('active');
     }
 
-    // --- EDITOR SYNC ---
     editor.onscroll = () => {
         high.scrollTop = editor.scrollTop;
         high.scrollLeft = editor.scrollLeft;
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- SANDBOXED SYNTAX ENGINE (FIXED) ---
+    // --- ATOMIC SYNTAX ENGINE (FIXED) ---
     const updateHigh = (text) => {
         // 1. Initial Escape
         let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-        // 2. Extract HTML Tags to Sandbox
-        // We replace them with a unique ID that NO regex will match: ~T_ID~
-        const htmlVault = [];
-        code = code.replace(/(&lt;.*?&gt;)/g, (match) => {
-            // -- PROCESS HTML INSIDE THE VAULT --
-            // 1. Highlight Tag Name (Red)
-            let processed = match.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
-            // 2. Highlight Attributes (Orange) - Robust Regex
+        // 2. Vault System (Extract items to inert placeholders)
+        const vault = [];
+        const save = (content) => {
+            vault.push(content);
+            return `___V${vault.length-1}___`; // Unique placeholder
+        };
+
+        // Extract Strings (Green)
+        code = code.replace(/"(.*?)"/g, (m) => save(`<span class="t-str">${m}</span>`));
+        code = code.replace(/'(.*?)'/g, (m) => save(`<span class="t-str">${m}</span>`));
+        
+        // Extract Comments (Gray)
+        code = code.replace(/(\/\/.*)/g, (m) => save(`<span class="t-comm">${m}</span>`));
+
+        // Extract HTML Tags (Red Tag, Orange Attribute)
+        // We process the HTML *inside* the extractor so it's fully isolated.
+        code = code.replace(/(&lt;.*?&gt;)/g, (m) => {
+            // Highlight Tag Name (e.g. &lt;div)
+            let processed = m.replace(/(&lt;\/?[a-z0-9]+)/gi, '<span class="t-tag">$1</span>');
+            // Highlight Attributes (e.g. class=) - Look for word followed by =
             processed = processed.replace(/(\s)([a-z-]+)(?==)/gi, '$1<span class="t-attr">$2</span>');
-            
-            htmlVault.push(processed);
-            return `~TAG${htmlVault.length-1}~`; 
+            return save(processed);
         });
 
-        // 3. Extract Strings/Comments to Sandbox (Protect them from JS keywords)
-        const textVault = [];
-        const saveText = (t) => { textVault.push(t); return `~TXT${textVault.length-1}~`; };
-        
-        code = code.replace(/"(.*?)"/g, (m) => saveText(`<span class="t-str">${m}</span>`));
-        code = code.replace(/'(.*?)'/g, (m) => saveText(`<span class="t-str">${m}</span>`));
-        code = code.replace(/(\/\/.*)/g, (m) => saveText(`<span class="t-comm">${m}</span>`));
-
-        // 4. Highlight JavaScript (Safe Zone)
-        // Now we can safely highlight keywords because all HTML tags and strings are hidden tokens.
+        // 3. Highlight JavaScript (Purple/Blue) - Run on the remaining "safe" text
         const keywords = "\\b(const|let|var|function|return|if|else|async|await|class|new|try|catch|for|while)\\b";
         code = code.replace(new RegExp(keywords, 'g'), '<span class="t-key">$1</span>');
         
         const objects = "\\b(document|window|console|fetch|navigator|localStorage)\\b";
         code = code.replace(new RegExp(objects, 'g'), '<span class="t-obj">$1</span>');
 
-        // 5. Restore Sandboxes (Reverse Order)
-        // Restore Text Tokens first
-        code = code.replace(/~TXT(\d+)~/g, (m, i) => textVault[i]);
-        
-        // Restore HTML Tags last (This puts the HTML-highlighted spans back into the flow)
-        // Since the main loop is done, "class" keyword highlighting won't run again.
-        code = code.replace(/~TAG(\d+)~/g, (m, i) => htmlVault[i]);
+        // 4. Restore Vault Items
+        // Loop to ensure we replace tokens that might have been adjacent
+        let cycles = 0;
+        while(code.includes('___V') && cycles < 10) {
+            code = code.replace(/___V(\d+)___/g, (m, i) => vault[i]);
+            cycles++;
+        }
 
         hContent.innerHTML = code + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
@@ -275,7 +274,6 @@
             rootHandle = await navigator.storage.getDirectory();
             try { await rootHandle.getFileHandle('vuln_db.json'); }
             catch { const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true}); const w = await fh.createWritable(); await w.write("[]"); await w.close(); }
-            
             await buildTree(rootHandle, document.getElementById('tree-root'));
             document.querySelectorAll('button').forEach(b => b.disabled = false);
             loadDB();
@@ -283,47 +281,27 @@
         } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- FILE TREE ---
     async function buildTree(dirHandle, container) {
         container.innerHTML = "";
         const entries = [];
         for await (const e of dirHandle.values()) entries.push(e);
         entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
-        
-        if(entries.length === 0) {
-            container.innerHTML = "<div style='font-size:10px; color:#999; padding-left:15px;'>(empty)</div>";
-            return;
-        }
-
+        if(entries.length === 0) { container.innerHTML = "<div style='font-size:10px; color:#999; padding-left:15px;'>(empty)</div>"; return; }
         for (const e of entries) {
             if(e.name === 'vuln_db.json') continue;
-            
-            const row = document.createElement('div');
-            row.className = 'tree-row';
-            
+            const row = document.createElement('div'); row.className = 'tree-row';
             if (e.kind === 'directory') {
                 row.innerHTML = `<span class="folder-icon">▶</span> 📁 ${e.name}`;
-                const sub = document.createElement('div');
-                sub.className = 'tree-item';
-                sub.style.display = 'none';
-                
+                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = 'none';
                 row.onclick = async (evt) => {
                     evt.stopPropagation();
                     const icon = row.querySelector('.folder-icon');
-                    if (sub.style.display === 'none') {
-                        sub.style.display = 'block';
-                        icon.innerHTML = '▼';
-                        await buildTree(e, sub);
-                    } else {
-                        sub.style.display = 'none';
-                        icon.innerHTML = '▶';
-                    }
+                    if (sub.style.display === 'none') { sub.style.display = 'block'; icon.innerHTML = '▼'; await buildTree(e, sub); } 
+                    else { sub.style.display = 'none'; icon.innerHTML = '▶'; }
                 };
-                container.appendChild(row);
-                container.appendChild(sub);
+                container.appendChild(row); container.appendChild(sub);
             } else {
-                row.innerHTML = `📄 ${e.name}`;
-                row.onclick = (evt) => { evt.stopPropagation(); loadFile(e); };
+                row.innerHTML = `📄 ${e.name}`; row.onclick = (evt) => { evt.stopPropagation(); loadFile(e); };
                 container.appendChild(row);
             }
         }
@@ -337,7 +315,6 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- DB & AUDIT ---
     async function loadDB() {
         try {
             const fh = await rootHandle.getFileHandle('vuln_db.json');
@@ -345,8 +322,7 @@
             const list = document.getElementById('dbList');
             list.innerHTML = "";
             const data = txt ? JSON.parse(txt) : [];
-            if(data.length === 0) list.innerHTML = "<div style='font-size:10px;opacity:0.5'>(Empty)</div>";
-            else data.forEach(x => {
+            data.forEach(x => {
                 list.innerHTML += `<div class="db-entry"><div class="db-title">${x.title}</div><div class="db-desc">${x.desc}</div></div>`;
             });
         } catch(e){ log("DB Load Error", "err"); }
@@ -367,16 +343,14 @@
             }
         }
         await scan(rootHandle);
-        
         if(findings.length > 0) {
-            log(`Found ${findings.length} issues. Saving...`, "err");
             const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
             const old = await (await fh.getFile()).text();
             const db = old ? JSON.parse(old) : [];
             const w = await fh.createWritable();
-            await w.write(JSON.stringify([...db, ...findings]));
-            await w.close();
+            await w.write(JSON.stringify([...db, ...findings])); await w.close();
             loadDB();
+            log(`Logged ${findings.length} findings.`, "err");
         } else { log("Clean scan.", "ok"); }
     };
 
@@ -389,11 +363,9 @@
         const data = t ? JSON.parse(t) : [];
         data.push({title, desc});
         const w = await fh.createWritable(); await w.write(JSON.stringify(data)); await w.close();
-        loadDB();
-        log("Entry saved.", "ok");
+        loadDB(); log("Entry saved.", "ok");
     };
 
-    // --- SEARCH ---
     document.getElementById('searchAllBtn').onclick = async () => {
         const q = document.getElementById('searchAll').value.toLowerCase();
         const res = document.getElementById('searchResults');
@@ -405,10 +377,8 @@
                 else {
                     const t = await (await e.getFile()).text();
                     if(t.toLowerCase().includes(q)) {
-                        const d = document.createElement('div');
-                        d.className = 'search-res';
-                        d.innerHTML = `Found in: <b>${e.name}</b>`;
-                        d.onclick = () => loadFile(e);
+                        const d = document.createElement('div'); d.className = 'search-res';
+                        d.innerHTML = `Found in: <b>${e.name}</b>`; d.onclick = () => loadFile(e);
                         res.appendChild(d);
                     }
                 }
@@ -418,20 +388,8 @@
         if(res.children.length===0) res.innerHTML = "<div style='font-size:10px'>No matches.</div>";
     };
 
-    // --- UTILS ---
     document.getElementById('runBtn').onclick = () => {
-        const hook = `<script>
-            (function(){
-                const send=(t,d)=>window.opener.postMessage({type:t,...d},'*');
-                console.log=function(){send('console',{msg:Array.from(arguments).join(' ')})};
-                window.onerror=(m)=>send('console',{msg:'ERR: '+m});
-                const of=window.fetch;
-                window.fetch=async(...a)=>{
-                    try{const r=await of.apply(this,a); send('network',{m:'GET',u:a[0].url||a[0],s:r.status}); return r;}
-                    catch(e){send('network',{m:'GET',u:a[0],s:'ERR'}); throw e;}
-                }
-            })();
-        <\/script>`;
+        const hook = `<script>(function(){const send=(t,d)=>window.opener.postMessage({type:t,...d},'*');console.log=function(){send('console',{msg:Array.from(arguments).join(' ')})};window.onerror=(m)=>send('console',{msg:'ERR: '+m});const of=window.fetch;window.fetch=async(...a)=>{try{const r=await of.apply(this,a); send('network',{m:'GET',u:a[0].url||a[0],s:r.status}); return r;}catch(e){send('network',{m:'GET',u:a[0],s:'ERR'}); throw e;}}})();<\/script>`;
         const blob = new Blob([hook + editor.value], {type:'text/html'});
         window.open(URL.createObjectURL(blob), '_blank');
         log("Run in new window.", "ok");
@@ -446,31 +404,14 @@
         if(e.data.type === 'console') log(e.data.msg);
     });
 
-    document.getElementById('saveBtn').onclick = async () => {
-        if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }
-    };
-    
+    document.getElementById('saveBtn').onclick = async () => { if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }};
     document.getElementById('gReplaceBtn').onclick = async () => {
-        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value;
-        if(!f) return;
+        const f = document.getElementById('gFind').value; const r = document.getElementById('gReplace').value; if(!f) return;
         async function run(dir) { for await (const e of dir.values()) { if(e.kind==='directory') await run(e); else { let t = await (await e.getFile()).text(); if(t.includes(f)) { const w = await e.createWritable(); await w.write(t.split(f).join(r)); await w.close(); }}}}
         await run(rootHandle); log("Replaced.");
     };
-
-    document.getElementById('demoBtn').onclick = async () => {
-        const h = await rootHandle.getFileHandle('demo.html', {create:true});
-        const w = await h.createWritable(); await w.write('<html><body><h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script></body></html>'); await w.close();
-        await buildTree(rootHandle, document.getElementById('tree-root'));
-        log("Demo Created.", "ok");
-    };
-
-    document.getElementById('backupBtn').onclick = async () => {
-        const zip = new JSZip();
-        async function walk(dir, folder) { for await (const e of dir.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }}
-        await walk(rootHandle, zip);
-        const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click();
-    };
-
+    document.getElementById('demoBtn').onclick = async () => { const h = await rootHandle.getFileHandle('demo.html', {create:true}); const w = await h.createWritable(); await w.write('<html><body><h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script></body></html>'); await w.close(); await buildTree(rootHandle, document.getElementById('tree-root')); log("Demo Created.", "ok"); };
+    document.getElementById('backupBtn').onclick = async () => { const zip = new JSZip(); async function walk(dir, folder) { for await (const e of dir.values()) { if(e.kind==='directory') await walk(e, folder.folder(e.name)); else folder.file(e.name, await e.getFile()); }} await walk(rootHandle, zip); const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download = "project.zip"; a.click(); };
     document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
     document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }};
     document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); loadDB(); }};
