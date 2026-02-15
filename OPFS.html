@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v12.0: Stable Integration</title>
+    <title>IDE v13.0: Logic & Data Fixes</title>
     <style>
         /* --- GEMINI THEME --- */
         :root {
@@ -113,7 +113,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v12.0 <span style="opacity:0.5; font-weight:400;">(Full Restore)</span></div>
+    <div>IDE v13.0 <span style="opacity:0.5; font-weight:400;">(Ironclad Logic)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -121,7 +121,7 @@
     <button class="btn-p" id="mountBtn">Initialize</button>
     <button class="btn-d" id="wipeBtn" disabled>Wipe</button>
     <div style="width:1px; height:16px; background:#ccc; margin:0 5px;"></div>
-    <button id="runBtn" class="btn-p" disabled>▶ Run in Window</button>
+    <button id="runBtn" class="btn-p" disabled>▶ Run</button>
     <button id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
@@ -165,19 +165,16 @@
         </div>
 
         <div id="toolsPane" class="pane">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
             <input type="text" id="searchAll" placeholder="Search files...">
             <button class="btn-p" style="width:100%" id="searchAllBtn">Search</button>
             <div id="searchResults" style="margin-top:10px; border:1px solid var(--border); max-height:100px; overflow:auto;"></div>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
             <input type="text" id="gFind" placeholder="Find...">
             <input type="text" id="gReplace" placeholder="Replace...">
             <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
-            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEME</div>
-            <button onclick="document.body.className='gemini'" style="width:100%">Gemini Light</button>
-            <button onclick="document.body.className='midnight'" style="width:100%">Midnight Dark</button>
+            <button onclick="document.body.className='gemini'" style="width:100%">Light</button>
+            <button onclick="document.body.className='midnight'" style="width:100%">Dark</button>
         </div>
     </div>
 
@@ -186,7 +183,7 @@
             <div id="line-numbers">1</div>
             <div class="editor-stack">
                 <pre id="highlighting"><code id="h-content"></code></pre>
-                <textarea id="editor" spellcheck="false" wrap="off" placeholder="Initialize OPFS to start..."></textarea>
+                <textarea id="editor" spellcheck="false" wrap="off" placeholder="Initialize to start..."></textarea>
             </div>
         </div>
         <div id="console-container">
@@ -208,124 +205,66 @@
     const lNums = document.getElementById('line-numbers');
     const con = document.getElementById('console');
 
+    // --- TAB LOGIC ---
     function tab(id) {
         document.querySelectorAll('.tab, .pane').forEach(e => e.classList.remove('active'));
         document.querySelector(`.tab[onclick="tab('${id}')"]`).classList.add('active');
         document.getElementById(id+'Pane').classList.add('active');
     }
 
+    // --- EDITOR SYNC ---
     editor.onscroll = () => {
         high.scrollTop = editor.scrollTop;
         high.scrollLeft = editor.scrollLeft;
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- STATE-MACHINE SYNTAX ENGINE (Clean & Artifact-Free) ---
+    // --- STATE-MACHINE SYNTAX ENGINE (ARTIFACT PROOF) ---
     const updateHigh = (text) => {
         const keywords = new Set(["const","let","var","function","return","if","else","class","new","async","await","try","catch","for","while"]);
         const globals = new Set(["document","window","console","fetch","navigator","localStorage"]);
         
         let out = "";
         let i = 0;
-        let state = "CODE"; // States: CODE, TAG, TAG_SPACE, STRING_Q, STRING_A, COMMENT
-        
+        let state = "CODE";
         const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         while (i < text.length) {
             const char = text[i];
-
             if (state === "CODE") {
-                if (char === '<' && text[i+1] !== ' ') {
-                    state = "TAG";
-                    out += "&lt;<span class='c-tag'>";
-                } else if (char === '"') {
-                    state = "STRING_Q";
-                    out += "<span class='c-str'>\"";
-                } else if (char === "'") {
-                    state = "STRING_A";
-                    out += "<span class='c-str'>'";
-                } else if (char === '/' && text[i+1] === '/') {
-                    state = "COMMENT";
-                    out += "<span class='c-com'>//";
-                    i++;
-                } else if (/[a-zA-Z_$]/.test(char)) {
-                    let word = "";
-                    while(i < text.length && /[a-zA-Z0-9_$]/.test(text[i])) {
-                        word += text[i++];
-                    }
-                    i--; 
-                    
+                if (char === '<' && text[i+1] !== ' ') { state = "TAG"; out += "&lt;<span class='c-tag'>"; } 
+                else if (char === '"') { state = "STRING_Q"; out += "<span class='c-str'>\""; } 
+                else if (char === "'") { state = "STRING_A"; out += "<span class='c-str'>'"; } 
+                else if (char === '/' && text[i+1] === '/') { state = "COMMENT"; out += "<span class='c-com'>//"; i++; } 
+                else if (/[a-zA-Z_$]/.test(char)) {
+                    let word = ""; while(i < text.length && /[a-zA-Z0-9_$]/.test(text[i])) word += text[i++]; i--;
                     if (keywords.has(word)) out += `<span class='c-key'>${word}</span>`;
                     else if (globals.has(word)) out += `<span class='c-obj'>${word}</span>`;
                     else out += word;
-                } else {
-                    out += esc(char);
-                }
+                } else out += esc(char);
             } 
             else if (state === "TAG") {
-                if (char === ' ' || char === '>') {
-                    out += "</span>"; 
-                    if (char === '>') {
-                        out += "&gt;";
-                        state = "CODE";
-                    } else {
-                        out += " ";
-                        state = "TAG_SPACE";
-                    }
-                } else {
-                    out += esc(char);
-                }
+                if (char === ' ' || char === '>') { out += "</span>"; if (char === '>') { out += "&gt;"; state = "CODE"; } else { out += " "; state = "TAG_SPACE"; } } 
+                else out += esc(char);
             }
             else if (state === "TAG_SPACE") {
-                if (char === '>') {
-                    state = "CODE";
-                    out += "&gt;";
-                } else if (char === '"') {
-                    state = "STRING_Q_IN_TAG";
-                    out += "<span class='c-str'>\"";
-                } else if (/[a-zA-Z-]/.test(char)) {
-                    out += "<span class='c-attr'>";
-                    while(i < text.length && /[a-zA-Z0-9-]/.test(text[i])) {
-                        out += text[i++];
-                    }
-                    out += "</span>";
-                    i--;
-                } else {
-                    out += esc(char);
-                }
+                if (char === '>') { state = "CODE"; out += "&gt;"; } 
+                else if (char === '"') { state = "STRING_Q_IN_TAG"; out += "<span class='c-str'>\""; } 
+                else if (/[a-zA-Z-]/.test(char)) { out += "<span class='c-attr'>"; while(i < text.length && /[a-zA-Z0-9-]/.test(text[i])) out += text[i++]; out += "</span>"; i--; } 
+                else out += esc(char);
             }
-            else if (state === "STRING_Q" || state === "STRING_Q_IN_TAG") {
-                out += esc(char);
-                if (char === '"') {
-                    out += "</span>";
-                    state = state === "STRING_Q" ? "CODE" : "TAG_SPACE";
-                }
-            }
-            else if (state === "STRING_A") {
-                out += esc(char);
-                if (char === "'") {
-                    out += "</span>";
-                    state = "CODE";
-                }
-            }
-            else if (state === "COMMENT") {
-                out += esc(char);
-                if (char === '\n') {
-                    out += "</span>";
-                    state = "CODE";
-                }
-            }
-            
+            else if (state === "STRING_Q" || state === "STRING_Q_IN_TAG") { out += esc(char); if (char === '"') { out += "</span>"; state = state === "STRING_Q" ? "CODE" : "TAG_SPACE"; } }
+            else if (state === "STRING_A") { out += esc(char); if (char === "'") { out += "</span>"; state = "CODE"; } }
+            else if (state === "COMMENT") { out += esc(char); if (char === '\n') { out += "</span>"; state = "CODE"; } }
             i++;
         }
-        
         if (state !== "CODE" && state !== "TAG_SPACE") out += "</span>";
         hContent.innerHTML = out + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
     };
-
     editor.oninput = () => updateHigh(editor.value);
 
+    // --- LOGGING ---
     const log = (m, type='info') => {
         const d = document.createElement('div'); d.textContent = `> ${m}`;
         if(type==='err') d.style.color = 'var(--danger)';
@@ -333,13 +272,13 @@
         con.appendChild(d); con.scrollTop = con.scrollHeight;
     };
 
+    // --- INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
             try { await rootHandle.getFileHandle('vuln_db.json'); }
             catch { const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true}); const w = await fh.createWritable(); await w.write("[]"); await w.close(); }
             
-            // ROOT DROP LOGIC
             const rootHead = document.getElementById('tree-root-header');
             rootHead.ondragover = e => { e.preventDefault(); rootHead.classList.add('drag-over'); };
             rootHead.ondragleave = () => rootHead.classList.remove('drag-over');
@@ -354,10 +293,11 @@
             await buildTree(rootHandle, document.getElementById('tree-root'));
             document.querySelectorAll('button').forEach(b => b.disabled = false);
             loadDB();
-            log("System Ready.", "ok");
+            log("System Initialized.", "ok");
         } catch(e) { log(e.message, 'err'); }
     };
 
+    // --- RECURSIVE DRAG & DROP LOGIC ---
     async function moveEntry(name, srcDir, destDir, kind) {
         try {
             if(kind === 'file') {
@@ -367,14 +307,19 @@
                 const w = await destH.createWritable();
                 await w.write(file); await w.close();
             } else {
-                await destDir.getDirectoryHandle(name, {create:true});
-                log("Folder moved (content check required)", "warn");
+                // Recursive Folder Move
+                const newDir = await destDir.getDirectoryHandle(name, {create:true});
+                const oldDir = await srcDir.getDirectoryHandle(name);
+                for await (const entry of oldDir.values()) {
+                    await moveEntry(entry.name, oldDir, newDir, entry.kind);
+                }
             }
-            await srcDir.removeEntry(name);
+            await srcDir.removeEntry(name, {recursive:true});
             log(`Moved ${name}`, "ok");
-        } catch(e) { log("Move Error: "+e.message, "err"); }
+        } catch(e) { log("Move Failed: "+e.message, "err"); }
     }
 
+    // --- FILE TREE ---
     async function buildTree(dirHandle, container) {
         container.innerHTML = "";
         const entries = [];
@@ -396,7 +341,6 @@
             row.ondragstart = (evt) => {
                 evt.stopPropagation();
                 draggedItem = { name: e.name, kind: e.kind, parent: dirHandle };
-                log(`Dragging ${e.name}...`);
             };
 
             if (e.kind === 'directory') {
@@ -443,38 +387,47 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
+    // --- DB & UTILS ---
     async function loadDB() {
         try {
             const fh = await rootHandle.getFileHandle('vuln_db.json');
             const txt = await (await fh.getFile()).text();
             const list = document.getElementById('dbList');
             list.innerHTML = "";
-            // Handle both legacy {t, d} and new {title, desc, mit} schemas
-            const data = txt ? JSON.parse(txt) : [];
+            let data = [];
+            try { data = txt ? JSON.parse(txt) : []; } catch(e) { data=[]; }
+            
             data.forEach(x => {
+                // Schema Normalizer: Handle old {t,d} and new {title,desc}
                 const t = x.title || x.t || "Untitled";
                 const d = x.desc || x.d || "";
-                const m = x.mit ? `<br><i>Fix: ${x.mit}</i>` : "";
-                list.innerHTML += `<div class="db-entry"><b>${t}</b><br>${d}${m}</div>`;
+                const m = x.mit || "";
+                list.innerHTML += `<div class="db-entry"><b>${t}</b><br>${d}${m ? `<br><i>Fix: ${m}</i>` : ""}</div>`;
             });
         } catch(e){ log("DB Load Error", "err"); }
     }
 
     document.getElementById('addDbEntryBtn').onclick = async () => {
+        if(!rootHandle) return log("Initialize first!", "err");
         const title = document.getElementById('dbTitle').value;
         const desc = document.getElementById('dbDesc').value;
         const mit = document.getElementById('dbMit').value;
         if(!title) return;
+        
         const fh = await rootHandle.getFileHandle('vuln_db.json');
         const old = await (await fh.getFile()).text();
-        const data = old ? JSON.parse(old) : [];
+        let data = [];
+        try { data = old ? JSON.parse(old) : []; } catch(e) {}
+        
         data.push({title, desc, mit});
         const w = await fh.createWritable(); await w.write(JSON.stringify(data)); await w.close();
         loadDB(); log("Logged.", "ok");
     };
 
     document.getElementById('runBtn').onclick = () => {
-        const blob = new Blob([editor.value], {type:'text/html'});
+        if(!rootHandle) return log("Initialize first!", "err");
+        const hook = `<script>(function(){const send=(t,d)=>window.opener.postMessage({type:t,...d},'*');console.log=function(){send('console',{msg:Array.from(arguments).join(' ')})};window.onerror=(m)=>send('console',{msg:'ERR: '+m});const of=window.fetch;window.fetch=async(...a)=>{try{const r=await of.apply(this,a); send('network',{m:'GET',u:a[0].url||a[0],s:r.status}); return r;}catch(e){send('network',{m:'GET',u:a[0],s:'ERR'}); throw e;}}})();<\/script>`;
+        const blob = new Blob([hook + editor.value], {type:'text/html'});
         window.open(URL.createObjectURL(blob), '_blank');
         log("Opened Preview.", "ok");
     };
@@ -483,8 +436,8 @@
         if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }
     };
 
-    // AUDIT LOGIC
     document.getElementById('auditBtn').onclick = async () => {
+        if(!rootHandle) return log("Initialize first!", "err");
         log("Scanning...", "warn");
         const findings = [];
         async function scan(dir) {
@@ -500,9 +453,10 @@
         }
         await scan(rootHandle);
         if(findings.length > 0) {
-            const fh = await rootHandle.getFileHandle('vuln_db.json');
+            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
             const old = await (await fh.getFile()).text();
-            const data = old ? JSON.parse(old) : [];
+            let data = [];
+            try { data = old ? JSON.parse(old) : []; } catch(e) {}
             const w = await fh.createWritable();
             await w.write(JSON.stringify([...data, ...findings])); await w.close();
             loadDB();
@@ -511,7 +465,7 @@
     };
 
     document.getElementById('searchAllBtn').onclick = async () => {
-        const q = document.getElementById('searchAll').value;
+        const q = document.getElementById('searchAll').value.toLowerCase();
         const res = document.getElementById('searchResults');
         res.innerHTML = "";
         async function scan(dir) {
@@ -519,7 +473,7 @@
                 if(e.kind==='directory') await scan(e);
                 else {
                     const t = await (await e.getFile()).text();
-                    if(t.includes(q)) {
+                    if(t.toLowerCase().includes(q)) {
                         const d = document.createElement('div');
                         d.className = 'search-res'; d.textContent = `Found in ${e.name}`;
                         d.onclick = () => loadFile(e);
@@ -528,14 +482,22 @@
                 }
             }
         }
-        await scan(rootHandle);
+        if(rootHandle) await scan(rootHandle);
     };
 
     document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(rootHandle, document.getElementById('tree-root')); }};
     document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); loadDB(); }};
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }};
     document.getElementById('backupBtn').onclick = async () => { const zip = new JSZip(); async function walk(dir, f) { for await (const e of dir.values()) if(e.kind==='file') f.file(e.name, await e.getFile()); else await walk(e, f.folder(e.name)); } await walk(rootHandle, zip); const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download="project.zip"; a.click(); };
-    document.getElementById('demoBtn').onclick = async () => { const h = await rootHandle.getFileHandle('demo.html', {create:true}); const w = await h.createWritable(); await w.write('<html><body><h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script></body></html>'); await w.close(); await buildTree(rootHandle, document.getElementById('tree-root')); log("Demo Created.", "ok"); };
+    document.getElementById('demoBtn').onclick = async () => {
+        if(!rootHandle) return log("Initialize first!", "err");
+        const h = await rootHandle.getFileHandle('demo.html', {create:true}); 
+        const w = await h.createWritable(); 
+        await w.write('<html><body><h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script></body></html>'); 
+        await w.close(); 
+        await buildTree(rootHandle, document.getElementById('tree-root')); 
+        log("Demo Created.", "ok"); 
+    };
 </script>
 </body>
 </html>
