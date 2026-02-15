@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v11.4: State-Machine Syntax</title>
+    <title>IDE v12.0: Stable Integration</title>
     <style>
         /* --- GEMINI THEME --- */
         :root {
@@ -113,7 +113,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v11.4 <span style="opacity:0.5; font-weight:400;">(State-Machine Syntax)</span></div>
+    <div>IDE v12.0 <span style="opacity:0.5; font-weight:400;">(Full Restore)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -121,12 +121,12 @@
     <button class="btn-p" id="mountBtn">Initialize</button>
     <button class="btn-d" id="wipeBtn" disabled>Wipe</button>
     <div style="width:1px; height:16px; background:#ccc; margin:0 5px;"></div>
-    <button id="runBtn" class="btn-p" disabled>▶ Run</button>
+    <button id="runBtn" class="btn-p" disabled>▶ Run in Window</button>
     <button id="auditBtn" disabled>🛡️ Audit</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="newFileBtn" disabled>+ File</button>
     <button id="newFolderBtn" disabled>+ Folder</button>
-    <button id="demoBtn" disabled>Demo</button>
+    <button id="demoBtn" disabled>Load Demo</button>
     <button id="backupBtn" disabled>💾 ZIP</button>
 </div>
 
@@ -146,10 +146,15 @@
 
         <div id="dbPane" class="pane">
             <div class="db-form">
-                <div style="font-weight:bold; font-size:11px; margin-bottom:5px; color:var(--accent);">ADD LOG</div>
-                <input type="text" id="dbTitle" class="db-input" placeholder="Title...">
+                <div style="font-weight:bold; font-size:11px; margin-bottom:5px; color:var(--accent);">ADD VULNERABILITY</div>
+                <input type="text" id="dbTitle" class="db-input" placeholder="Title (e.g. XSS)">
                 <input type="text" id="dbDesc" class="db-input" placeholder="Description...">
+                <input type="text" id="dbMit" class="db-input" placeholder="Fix/Mitigation...">
                 <button class="btn-p" style="width:100%;" id="addDbEntryBtn">Add Entry</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <b style="font-size:11px;">LOG ENTRIES</b>
+                <span onclick="loadDB()" style="cursor:pointer; color:var(--accent); font-size:10px;">REFRESH</span>
             </div>
             <div id="dbList"></div>
         </div>
@@ -160,16 +165,19 @@
         </div>
 
         <div id="toolsPane" class="pane">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
             <input type="text" id="searchAll" placeholder="Search files...">
             <button class="btn-p" style="width:100%" id="searchAllBtn">Search</button>
             <div id="searchResults" style="margin-top:10px; border:1px solid var(--border); max-height:100px; overflow:auto;"></div>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
             <input type="text" id="gFind" placeholder="Find...">
             <input type="text" id="gReplace" placeholder="Replace...">
             <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
-            <button onclick="document.body.className='gemini'" style="width:100%">Light</button>
-            <button onclick="document.body.className='midnight'" style="width:100%">Dark</button>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEME</div>
+            <button onclick="document.body.className='gemini'" style="width:100%">Gemini Light</button>
+            <button onclick="document.body.className='midnight'" style="width:100%">Midnight Dark</button>
         </div>
     </div>
 
@@ -212,19 +220,15 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- STATE-MACHINE SYNTAX ENGINE (ARTIFACT PROOF) ---
-    // This function parses the text character by character. 
-    // It maintains a 'state' (CODE, TAG, ATTR, STRING) to decide colors.
-    // It builds the output string sequentially, so it can never 'see' text it has already colored.
+    // --- STATE-MACHINE SYNTAX ENGINE (Clean & Artifact-Free) ---
     const updateHigh = (text) => {
         const keywords = new Set(["const","let","var","function","return","if","else","class","new","async","await","try","catch","for","while"]);
-        const globals = new Set(["document","window","console","fetch","navigator"]);
+        const globals = new Set(["document","window","console","fetch","navigator","localStorage"]);
         
         let out = "";
         let i = 0;
         let state = "CODE"; // States: CODE, TAG, TAG_SPACE, STRING_Q, STRING_A, COMMENT
         
-        // Helper to escape HTML characters
         const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         while (i < text.length) {
@@ -245,12 +249,11 @@
                     out += "<span class='c-com'>//";
                     i++;
                 } else if (/[a-zA-Z_$]/.test(char)) {
-                    // Start of a word
                     let word = "";
                     while(i < text.length && /[a-zA-Z0-9_$]/.test(text[i])) {
                         word += text[i++];
                     }
-                    i--; // Backtrack one since main loop increments
+                    i--; 
                     
                     if (keywords.has(word)) out += `<span class='c-key'>${word}</span>`;
                     else if (globals.has(word)) out += `<span class='c-obj'>${word}</span>`;
@@ -261,7 +264,7 @@
             } 
             else if (state === "TAG") {
                 if (char === ' ' || char === '>') {
-                    out += "</span>"; // End tag name span
+                    out += "</span>"; 
                     if (char === '>') {
                         out += "&gt;";
                         state = "CODE";
@@ -281,7 +284,6 @@
                     state = "STRING_Q_IN_TAG";
                     out += "<span class='c-str'>\"";
                 } else if (/[a-zA-Z-]/.test(char)) {
-                    // Start attribute
                     out += "<span class='c-attr'>";
                     while(i < text.length && /[a-zA-Z0-9-]/.test(text[i])) {
                         out += text[i++];
@@ -317,16 +319,13 @@
             i++;
         }
         
-        // Close any open spans at EOF
         if (state !== "CODE" && state !== "TAG_SPACE") out += "</span>";
-
         hContent.innerHTML = out + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
     };
 
     editor.oninput = () => updateHigh(editor.value);
 
-    // --- LOGGING ---
     const log = (m, type='info') => {
         const d = document.createElement('div'); d.textContent = `> ${m}`;
         if(type==='err') d.style.color = 'var(--danger)';
@@ -334,14 +333,13 @@
         con.appendChild(d); con.scrollTop = con.scrollHeight;
     };
 
-    // --- INIT ---
     document.getElementById('mountBtn').onclick = async () => {
         try {
             rootHandle = await navigator.storage.getDirectory();
             try { await rootHandle.getFileHandle('vuln_db.json'); }
             catch { const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true}); const w = await fh.createWritable(); await w.write("[]"); await w.close(); }
             
-            // ROOT DROP TARGET
+            // ROOT DROP LOGIC
             const rootHead = document.getElementById('tree-root-header');
             rootHead.ondragover = e => { e.preventDefault(); rootHead.classList.add('drag-over'); };
             rootHead.ondragleave = () => rootHead.classList.remove('drag-over');
@@ -360,7 +358,6 @@
         } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- DRAG & DROP LOGIC ---
     async function moveEntry(name, srcDir, destDir, kind) {
         try {
             if(kind === 'file') {
@@ -378,7 +375,6 @@
         } catch(e) { log("Move Error: "+e.message, "err"); }
     }
 
-    // --- FILE TREE ---
     async function buildTree(dirHandle, container) {
         container.innerHTML = "";
         const entries = [];
@@ -396,17 +392,15 @@
             const row = document.createElement('div');
             row.className = 'tree-row';
             
-            // DRAG EVENTS
             row.draggable = true;
             row.ondragstart = (evt) => {
                 evt.stopPropagation();
                 draggedItem = { name: e.name, kind: e.kind, parent: dirHandle };
+                log(`Dragging ${e.name}...`);
             };
 
             if (e.kind === 'directory') {
                 row.innerHTML = `<span class="folder-icon">▶</span> 📁 ${e.name}`;
-                
-                // DROP EVENTS
                 row.ondragover = (evt) => { evt.preventDefault(); evt.stopPropagation(); row.classList.add('drag-over'); };
                 row.ondragleave = (evt) => { evt.stopPropagation(); row.classList.remove('drag-over'); };
                 row.ondrop = async (evt) => {
@@ -449,26 +443,32 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- DB & UTILS ---
     async function loadDB() {
         try {
             const fh = await rootHandle.getFileHandle('vuln_db.json');
             const txt = await (await fh.getFile()).text();
             const list = document.getElementById('dbList');
             list.innerHTML = "";
+            // Handle both legacy {t, d} and new {title, desc, mit} schemas
             const data = txt ? JSON.parse(txt) : [];
-            data.forEach(x => list.innerHTML += `<div class="db-entry"><b>${x.t}</b><br>${x.d}</div>`);
-        } catch(e){}
+            data.forEach(x => {
+                const t = x.title || x.t || "Untitled";
+                const d = x.desc || x.d || "";
+                const m = x.mit ? `<br><i>Fix: ${x.mit}</i>` : "";
+                list.innerHTML += `<div class="db-entry"><b>${t}</b><br>${d}${m}</div>`;
+            });
+        } catch(e){ log("DB Load Error", "err"); }
     }
 
     document.getElementById('addDbEntryBtn').onclick = async () => {
-        const t = document.getElementById('dbTitle').value;
-        const d = document.getElementById('dbDesc').value;
-        if(!t) return;
+        const title = document.getElementById('dbTitle').value;
+        const desc = document.getElementById('dbDesc').value;
+        const mit = document.getElementById('dbMit').value;
+        if(!title) return;
         const fh = await rootHandle.getFileHandle('vuln_db.json');
         const old = await (await fh.getFile()).text();
         const data = old ? JSON.parse(old) : [];
-        data.push({t, d});
+        data.push({title, desc, mit});
         const w = await fh.createWritable(); await w.write(JSON.stringify(data)); await w.close();
         loadDB(); log("Logged.", "ok");
     };
@@ -481,6 +481,33 @@
 
     document.getElementById('saveBtn').onclick = async () => {
         if(currentHandle) { const w = await currentHandle.createWritable(); await w.write(editor.value); await w.close(); log("Saved.", "ok"); }
+    };
+
+    // AUDIT LOGIC
+    document.getElementById('auditBtn').onclick = async () => {
+        log("Scanning...", "warn");
+        const findings = [];
+        async function scan(dir) {
+            for await (const e of dir.values()) {
+                if(e.kind==='directory') await scan(e);
+                else {
+                    if(e.name === 'vuln_db.json') continue;
+                    const t = await (await e.getFile()).text();
+                    if(t.includes('innerHTML')) findings.push({title:"XSS Risk", desc:`Found in ${e.name}`, mit:"Use textContent"});
+                    if(t.includes('http:')) findings.push({title:"Insecure HTTP", desc:`Found in ${e.name}`, mit:"Use HTTPS"});
+                }
+            }
+        }
+        await scan(rootHandle);
+        if(findings.length > 0) {
+            const fh = await rootHandle.getFileHandle('vuln_db.json');
+            const old = await (await fh.getFile()).text();
+            const data = old ? JSON.parse(old) : [];
+            const w = await fh.createWritable();
+            await w.write(JSON.stringify([...data, ...findings])); await w.close();
+            loadDB();
+            log(`Found ${findings.length} issues.`, "err");
+        } else { log("Clean scan.", "ok"); }
     };
 
     document.getElementById('searchAllBtn').onclick = async () => {
@@ -506,8 +533,9 @@
 
     document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(rootHandle, document.getElementById('tree-root')); }};
     document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }};
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); loadDB(); }};
     document.getElementById('backupBtn').onclick = async () => { const zip = new JSZip(); async function walk(dir, f) { for await (const e of dir.values()) if(e.kind==='file') f.file(e.name, await e.getFile()); else await walk(e, f.folder(e.name)); } await walk(rootHandle, zip); const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download="project.zip"; a.click(); };
+    document.getElementById('demoBtn').onclick = async () => { const h = await rootHandle.getFileHandle('demo.html', {create:true}); const w = await h.createWritable(); await w.write('<html><body><h1>XSS</h1><script>document.body.innerHTML="bad"; fetch("/test")<\/script></body></html>'); await w.close(); await buildTree(rootHandle, document.getElementById('tree-root')); log("Demo Created.", "ok"); };
 </script>
 </body>
 </html>
