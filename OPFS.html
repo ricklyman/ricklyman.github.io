@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v13.0: Logic & Data Fixes</title>
+    <title>IDE v14.0: Context Menus</title>
     <style>
         /* --- GEMINI THEME --- */
         :root {
@@ -11,13 +11,9 @@
             --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
             
-            /* SYNTAX COLORS (Classes) */
-            --c-tag: #d93025;  /* Red */
-            --c-attr: #e37400; /* Orange */
-            --c-str: #188038;  /* Green */
-            --c-key: #a142f4;  /* Purple */
-            --c-obj: #1a73e8;  /* Blue */
-            --c-com: #747775;  /* Gray */
+            /* SYNTAX COLORS */
+            --c-tag: #d93025; --c-attr: #e37400; --c-str: #188038; 
+            --c-key: #a142f4; --c-obj: #1a73e8; --c-com: #747775;
         }
         body.midnight {
             --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
@@ -65,8 +61,27 @@
         .tree-item { margin-left: 15px; border-left: 1px solid var(--border); }
         .folder-icon { width: 14px; text-align: center; display: inline-block; font-size: 10px; margin-right: 4px; }
 
+        /* Context Menu */
+        #ctxMenu {
+            display: none; position: absolute; z-index: 1000; background: var(--sidebar); 
+            border: 1px solid var(--border); box-shadow: 2px 2px 5px rgba(0,0,0,0.2); border-radius: 4px;
+        }
+        .ctx-item { padding: 8px 15px; cursor: pointer; font-size: 12px; font-family: system-ui; }
+        .ctx-item:hover { background: rgba(0,0,0,0.05); }
+        .ctx-danger { color: var(--danger); }
+
         /* DB & Search */
-        .db-entry { padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); margin-bottom: 6px; background: rgba(255,255,255,0.5); border-radius: 4px; font-family: system-ui; }
+        .db-entry { 
+            padding: 8px; border: 1px solid var(--border); border-left: 3px solid var(--danger); 
+            margin-bottom: 6px; background: rgba(255,255,255,0.5); border-radius: 4px; font-family: system-ui; 
+            position: relative;
+        }
+        .db-del {
+            position: absolute; top: 5px; right: 5px; color: var(--danger); cursor: pointer; 
+            font-weight: bold; font-size: 12px; padding: 2px 5px; border-radius: 3px;
+        }
+        .db-del:hover { background: rgba(255,0,0,0.1); }
+
         .search-res { padding: 5px; border-bottom: 1px solid var(--border); font-size: 11px; cursor: pointer; font-family: system-ui; }
         .search-res:hover { background: rgba(0,0,0,0.05); }
 
@@ -113,7 +128,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v13.0 <span style="opacity:0.5; font-weight:400;">(Ironclad Logic)</span></div>
+    <div>IDE v14.0 <span style="opacity:0.5; font-weight:400;">(Context Menus)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -128,6 +143,11 @@
     <button id="newFolderBtn" disabled>+ Folder</button>
     <button id="demoBtn" disabled>Load Demo</button>
     <button id="backupBtn" disabled>💾 ZIP</button>
+</div>
+
+<div id="ctxMenu">
+    <div class="ctx-item" id="ctxRename">Rename</div>
+    <div class="ctx-item ctx-danger" id="ctxDelete">Delete</div>
 </div>
 
 <div class="main-layout">
@@ -165,16 +185,19 @@
         </div>
 
         <div id="toolsPane" class="pane">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">DEEP SEARCH</div>
             <input type="text" id="searchAll" placeholder="Search files...">
             <button class="btn-p" style="width:100%" id="searchAllBtn">Search</button>
             <div id="searchResults" style="margin-top:10px; border:1px solid var(--border); max-height:100px; overflow:auto;"></div>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">GLOBAL REPLACE</div>
             <input type="text" id="gFind" placeholder="Find...">
             <input type="text" id="gReplace" placeholder="Replace...">
             <button class="btn-p" style="width:100%" id="gReplaceBtn">Replace All</button>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--border);">
-            <button onclick="document.body.className='gemini'" style="width:100%">Light</button>
-            <button onclick="document.body.className='midnight'" style="width:100%">Dark</button>
+            <div style="font-weight:bold; font-size:11px; margin-bottom:5px;">THEME</div>
+            <button onclick="document.body.className='gemini'" style="width:100%">Gemini Light</button>
+            <button onclick="document.body.className='midnight'" style="width:100%">Midnight Dark</button>
         </div>
     </div>
 
@@ -198,12 +221,14 @@
 <script>
     let rootHandle, currentHandle;
     let draggedItem = null;
+    let ctxTarget = null; // Stores {name, handle, parent} for context menu
 
     const editor = document.getElementById('editor');
     const high = document.getElementById('highlighting');
     const hContent = document.getElementById('h-content');
     const lNums = document.getElementById('line-numbers');
     const con = document.getElementById('console');
+    const ctxMenu = document.getElementById('ctxMenu');
 
     // --- TAB LOGIC ---
     function tab(id) {
@@ -219,14 +244,11 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- STATE-MACHINE SYNTAX ENGINE (ARTIFACT PROOF) ---
+    // --- SYNTAX ENGINE ---
     const updateHigh = (text) => {
         const keywords = new Set(["const","let","var","function","return","if","else","class","new","async","await","try","catch","for","while"]);
         const globals = new Set(["document","window","console","fetch","navigator","localStorage"]);
-        
-        let out = "";
-        let i = 0;
-        let state = "CODE";
+        let out = "", i = 0, state = "CODE";
         const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         while (i < text.length) {
@@ -264,12 +286,45 @@
     };
     editor.oninput = () => updateHigh(editor.value);
 
-    // --- LOGGING ---
     const log = (m, type='info') => {
         const d = document.createElement('div'); d.textContent = `> ${m}`;
         if(type==='err') d.style.color = 'var(--danger)';
         if(type==='ok') d.style.color = 'var(--success)';
         con.appendChild(d); con.scrollTop = con.scrollHeight;
+    };
+
+    // --- CONTEXT MENU LOGIC ---
+    window.onclick = () => ctxMenu.style.display = 'none'; // Hide on click elsewhere
+
+    document.getElementById('ctxRename').onclick = async () => {
+        if(!ctxTarget) return;
+        const newName = prompt("Rename to:", ctxTarget.name);
+        if(!newName || newName === ctxTarget.name) return;
+        
+        try {
+            // Rename = Copy + Delete
+            if(ctxTarget.handle.kind === 'file') {
+                const file = await ctxTarget.handle.getFile();
+                const newHandle = await ctxTarget.parent.getFileHandle(newName, {create:true});
+                const w = await newHandle.createWritable();
+                await w.write(file); await w.close();
+            } else {
+                await ctxTarget.parent.getDirectoryHandle(newName, {create:true});
+                log("Folder renamed (empty)", "warn");
+            }
+            await ctxTarget.parent.removeEntry(ctxTarget.name);
+            buildTree(rootHandle, document.getElementById('tree-root'));
+            log(`Renamed to ${newName}`, "ok");
+        } catch(e) { log("Rename failed: "+e.message, "err"); }
+    };
+
+    document.getElementById('ctxDelete').onclick = async () => {
+        if(!ctxTarget || !confirm(`Delete ${ctxTarget.name}?`)) return;
+        try {
+            await ctxTarget.parent.removeEntry(ctxTarget.name, {recursive:true});
+            buildTree(rootHandle, document.getElementById('tree-root'));
+            log(`Deleted ${ctxTarget.name}`, "ok");
+        } catch(e) { log("Delete failed: "+e.message, "err"); }
     };
 
     // --- INIT ---
@@ -297,7 +352,6 @@
         } catch(e) { log(e.message, 'err'); }
     };
 
-    // --- RECURSIVE DRAG & DROP LOGIC ---
     async function moveEntry(name, srcDir, destDir, kind) {
         try {
             if(kind === 'file') {
@@ -307,16 +361,15 @@
                 const w = await destH.createWritable();
                 await w.write(file); await w.close();
             } else {
-                // Recursive Folder Move
                 const newDir = await destDir.getDirectoryHandle(name, {create:true});
                 const oldDir = await srcDir.getDirectoryHandle(name);
                 for await (const entry of oldDir.values()) {
-                    await moveEntry(entry.name, oldDir, newDir, entry.kind);
+                    await moveEntry(entry.name, oldDir, newDir, entry.kind); // Recursive
                 }
             }
             await srcDir.removeEntry(name, {recursive:true});
             log(`Moved ${name}`, "ok");
-        } catch(e) { log("Move Failed: "+e.message, "err"); }
+        } catch(e) { log("Move Error: "+e.message, "err"); }
     }
 
     // --- FILE TREE ---
@@ -337,6 +390,16 @@
             const row = document.createElement('div');
             row.className = 'tree-row';
             
+            // CONTEXT MENU EVENT
+            row.oncontextmenu = (evt) => {
+                evt.preventDefault();
+                evt.stopPropagation();
+                ctxTarget = { name: e.name, handle: e, parent: dirHandle };
+                ctxMenu.style.display = 'block';
+                ctxMenu.style.left = evt.pageX + 'px';
+                ctxMenu.style.top = evt.pageY + 'px';
+            };
+
             row.draggable = true;
             row.ondragstart = (evt) => {
                 evt.stopPropagation();
@@ -387,22 +450,35 @@
         document.getElementById('status').textContent = `Editing: ${h.name}`;
     }
 
-    // --- DB & UTILS ---
+    // --- DB MANAGEMENT ---
+    window.delLog = async (index) => {
+        try {
+            const fh = await rootHandle.getFileHandle('vuln_db.json');
+            const txt = await (await fh.getFile()).text();
+            let data = JSON.parse(txt);
+            data.splice(index, 1); // Remove
+            const w = await fh.createWritable(); await w.write(JSON.stringify(data)); await w.close();
+            loadDB();
+        } catch(e) { log("Del error", "err"); }
+    };
+
     async function loadDB() {
         try {
             const fh = await rootHandle.getFileHandle('vuln_db.json');
             const txt = await (await fh.getFile()).text();
             const list = document.getElementById('dbList');
             list.innerHTML = "";
-            let data = [];
-            try { data = txt ? JSON.parse(txt) : []; } catch(e) { data=[]; }
+            const data = txt ? JSON.parse(txt) : [];
             
-            data.forEach(x => {
-                // Schema Normalizer: Handle old {t,d} and new {title,desc}
+            data.forEach((x, i) => {
                 const t = x.title || x.t || "Untitled";
                 const d = x.desc || x.d || "";
-                const m = x.mit || "";
-                list.innerHTML += `<div class="db-entry"><b>${t}</b><br>${d}${m ? `<br><i>Fix: ${m}</i>` : ""}</div>`;
+                const m = x.mit ? `<br><i>Fix: ${x.mit}</i>` : "";
+                // Added Delete Button [x]
+                list.innerHTML += `<div class="db-entry">
+                    <span class="db-del" onclick="delLog(${i})">[×]</span>
+                    <b>${t}</b><br>${d}${m}
+                </div>`;
             });
         } catch(e){ log("DB Load Error", "err"); }
     }
@@ -453,7 +529,7 @@
         }
         await scan(rootHandle);
         if(findings.length > 0) {
-            const fh = await rootHandle.getFileHandle('vuln_db.json', {create:true});
+            const fh = await rootHandle.getFileHandle('vuln_db.json');
             const old = await (await fh.getFile()).text();
             let data = [];
             try { data = old ? JSON.parse(old) : []; } catch(e) {}
@@ -473,7 +549,7 @@
                 if(e.kind==='directory') await scan(e);
                 else {
                     const t = await (await e.getFile()).text();
-                    if(t.toLowerCase().includes(q)) {
+                    if(t.includes(q)) {
                         const d = document.createElement('div');
                         d.className = 'search-res'; d.textContent = `Found in ${e.name}`;
                         d.onclick = () => loadFile(e);
@@ -487,7 +563,7 @@
 
     document.getElementById('newFileBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getFileHandle(n, {create:true}); buildTree(rootHandle, document.getElementById('tree-root')); }};
     document.getElementById('newFolderBtn').onclick = async () => { const n = prompt("Name:"); if(n) { await rootHandle.getDirectoryHandle(n, {create:true}); buildTree(rootHandle, document.getElementById('tree-root')); }};
-    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); }};
+    document.getElementById('wipeBtn').onclick = async () => { if(confirm("Wipe?")) { for await (const e of rootHandle.values()) await rootHandle.removeEntry(e.name,{recursive:true}); await buildTree(rootHandle,document.getElementById('tree-root')); loadDB(); }};
     document.getElementById('backupBtn').onclick = async () => { const zip = new JSZip(); async function walk(dir, f) { for await (const e of dir.values()) if(e.kind==='file') f.file(e.name, await e.getFile()); else await walk(e, f.folder(e.name)); } await walk(rootHandle, zip); const a = document.createElement('a'); a.href = URL.createObjectURL(await zip.generateAsync({type:"blob"})); a.download="project.zip"; a.click(); };
     document.getElementById('demoBtn').onclick = async () => {
         if(!rootHandle) return log("Initialize first!", "err");
