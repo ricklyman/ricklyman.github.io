@@ -115,11 +115,11 @@
         #console { flex: 1; padding: 10px; font-size: 11px; overflow: auto; }
 
         /* SYNTAX CLASSES (Strict !important) */
-        .c-tag { color: var(--c-tag) !important; font-weight: 700; }
-        .c-attr { color: var(--c-attr) !important; }
-        .c-str { color: var(--c-str) !important; }
+        .c-tag { color: var(--c-tag) !important; font-weight: 700; } 
+        .c-attr { color: var(--c-attr) !important; } 
+        .c-str { color: var(--c-str) !important; } 
         .c-key { color: var(--c-key) !important; font-weight: 600; }
-        .c-obj { color: var(--c-obj) !important; font-weight: 600; }
+        .c-obj { color: var(--c-obj) !important; font-weight: 600; } 
         .c-com { color: var(--c-com) !important; font-style: italic; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -549,7 +549,7 @@
                 if(e.kind==='directory') await scan(e);
                 else {
                     const t = await (await e.getFile()).text();
-                    if(t.includes(q)) {
+                    if(t.toLowerCase().includes(q)) {
                         const d = document.createElement('div');
                         d.className = 'search-res'; d.textContent = `Found in ${e.name}`;
                         d.onclick = () => loadFile(e);
