@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IDE v11.1: Syntax Collision Fix</title>
+    <title>IDE v11.2: Split-Stream Engine</title>
     <style>
         /* --- GEMINI THEME --- */
         :root {
@@ -10,19 +10,11 @@
             --header: #ffffff; --header-text: #1f1f1f;
             --line-bg: #e1e5ea; --line-text: #747775;
             --accent: #0b57d0; --success: #146c2e; --warn: #ea8600; --danger: #b3261e;
-            
-            /* SYNTAX COLORS (Forced) */
-            --tag: #d93025;  /* Red */
-            --attr: #e37400; /* Orange/Brown */
-            --str: #188038;  /* Green */
-            --key: #a142f4;  /* Purple */
-            --obj: #1a73e8;  /* Blue */
-            --comm: #747775; /* Gray */
         }
         body.midnight {
             --bg: #000; --text: #0f0; --sidebar: #111; --border: #333;
             --header: #000; --header-text: #0f0; --line-bg: #111; --line-text: #0f0;
-            --accent: #0f0; --tag: #ff5555; --attr: #f1fa8c; --str: #50fa7b; --key: #bd93f9; --obj: #8be9fd; --comm: #6272a4;
+            --accent: #0f0;
         }
 
         /* --- LAYOUT --- */
@@ -92,14 +84,6 @@
         #console-container { height: 140px; background: #1e1e1e; color: #ccc; display: flex; flex-direction: column; transition: 0.2s; border-top: 2px solid var(--border); }
         .c-toolbar { padding: 5px 10px; background: #252526; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; cursor: pointer; }
         #console { flex: 1; padding: 10px; font-family: monospace; font-size: 11px; overflow: auto; }
-
-        /* SYNTAX CLASSES (Strict !important) */
-        .t-tag { color: var(--tag) !important; font-weight: 700; } 
-        .t-attr { color: var(--attr) !important; } 
-        .t-str { color: var(--str) !important; } 
-        .t-key { color: var(--key) !important; font-weight: 600; }
-        .t-obj { color: var(--obj) !important; font-weight: 600; } 
-        .t-comm { color: var(--comm) !important; font-style: italic; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -107,7 +91,7 @@
 <body class="gemini">
 
 <header>
-    <div>IDE v11.1 <span style="opacity:0.5; font-weight:400;">(Collision Proof)</span></div>
+    <div>IDE v11.2 <span style="opacity:0.5; font-weight:400;">(Split-Stream Fix)</span></div>
     <div id="status" style="font-size: 11px; opacity: 0.7;">Disconnected</div>
 </header>
 
@@ -211,122 +195,58 @@
         lNums.scrollTop = editor.scrollTop;
     };
     
-    // --- COLLISION-PROOF SYNTAX ENGINE ---
+    // --- SPLIT-STREAM SYNTAX ENGINE (THE FINAL FIX) ---
+    // Instead of regex replacing the whole string (which causes collisions),
+    // we split the string into [TAG, CONTENT, TAG, CONTENT] and process them separately.
     const updateHigh = (text) => {
-        const keywords = new Set(["const","let","var","function","return","if","else","async","await","class","new","try","catch","for","while"]);
-        const objects = new Set(["document","window","console","fetch","navigator","localStorage"]);
-        
-        let out = "";
-        let i = 0;
-        const len = text.length;
-        
-        while (i < len) {
-            // 1. HTML Tags (The Source of Collisions)
-            // Fix: We process tags completely separately so we never scan inside them for keywords.
-            if (text[i] === '<') {
-                let end = text.indexOf(">", i);
-                if (end === -1) end = len;
-                else end += 1; // Include >
+        // 1. Escape basic HTML entities so we are working with safe text
+        let safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        // 2. SPLIT into array based on tags. 
+        // Regex matches &lt;...&gt; (captured group () keeps the delimiter in the result array)
+        let parts = safe.split(/(&lt;.*?&gt;)/g); 
+
+        // 3. ITERATE and process based on type
+        for (let i = 0; i < parts.length; i++) {
+            let part = parts[i];
+            
+            if (part.startsWith('&lt;')) { 
+                // === IT IS A TAG ===
+                // Colorize Tag Name (Red): &lt;div
+                part = part.replace(/^(&lt;\/?[a-zA-Z0-9]+)/, '<span style="color:#d93025; font-weight:bold;">$1</span>');
                 
-                const fullTag = text.substring(i, end);
+                // Colorize Attributes (Orange): key=
+                // We match space + word + =
+                part = part.replace(/(\s)([a-zA-Z0-9-]+)(=)/g, '$1<span style="color:#e37400;">$2</span>$3');
                 
-                // --- ISOLATED TAG PARSER ---
-                // Split tag into: <div + attributes + >
-                // This ensures we never accidentally highlight "class" inside a span we create.
+                // Colorize Strings inside tags (Green)
+                part = part.replace(/"(.*?)"/g, '<span style="color:#188038;">"$1"</span>');
+                part = part.replace(/'(.*?)'/g, '<span style="color:#188038;">\'$1\'</span>');
                 
-                // A. Find Tag Name start/end
-                const match = fullTag.match(/^<(\/?[a-z0-9]+)/i);
-                if (match) {
-                    const tagName = match[1]; // e.g. "div" or "/div"
-                    const tagStartLen = match[0].length; 
-                    
-                    // 1. Output &lt;TagName (Red)
-                    out += `&lt;<span class="t-tag">${tagName}</span>`;
-                    
-                    // 2. Process Attributes (Orange) - only on the text AFTER the tag name
-                    // This is the "Rest" of the string inside the tag
-                    let rest = fullTag.substring(tagStartLen);
-                    
-                    // We must escape the "rest" first so we don't output raw HTML
-                    // Then we selectively apply spans
-                    // But wait, if we escape first, we can't easily find attributes with regex.
-                    // Better: Regex replace on raw string, then escape surrounding text?
-                    // Simpler: Just replace attribute keys.
-                    
-                    // Replace ' key=' with ' <span...>key</span>='
-                    // Since "rest" is just the attribute part, this is safe.
-                    let processedRest = rest.replace(/(\s)([a-z-]+)(?=\s*=)/gi, '$1<span class="t-attr">$2</span>');
-                    
-                    // Now escape only the parts that aren't our new spans
-                    // Actually, simpler trick: Escape the WHOLE "rest", then unescape our specific spans? 
-                    // No, that's messy.
-                    
-                    // Safe Approach: Escape the raw text first, THEN wrap.
-                    let safeRest = escape(rest); // class="foo"&gt;
-                    // Now replace attributes in the safe string. 
-                    // Need to match encoded spaces? No, escape() keeps spaces.
-                    safeRest = safeRest.replace(/(\s)([a-z-]+)(?=\s*=)/gi, '$1<span class="t-attr">$2</span>');
-                    
-                    out += safeRest;
-                } else {
-                    // Not a standard tag (e.g. or weird text), just escape it
-                    out += escape(fullTag);
-                }
+            } else {
+                // === IT IS CONTENT / CODE ===
                 
-                i = end;
-                continue;
+                // Strings (Green)
+                part = part.replace(/"(.*?)"/g, '<span style="color:#188038;">"$1"</span>');
+                part = part.replace(/'(.*?)'/g, '<span style="color:#188038;">\'$1\'</span>');
+                
+                // Comments (Gray)
+                part = part.replace(/(\/\/.*)/g, '<span style="color:#747775; font-style:italic;">$1</span>');
+
+                // Keywords (Purple) - Only match whole words
+                part = part.replace(/\b(const|let|var|function|return|if|else|class|new|async|await|try|catch|for|while)\b/g, '<span style="color:#a142f4; font-weight:bold;">$1</span>');
+                
+                // Globals (Blue)
+                part = part.replace(/\b(document|window|console|fetch|navigator|localStorage)\b/g, '<span style="color:#1a73e8; font-weight:bold;">$1</span>');
             }
             
-            // 2. Strings
-            if (text[i] === '"' || text[i] === "'") {
-                const q = text[i];
-                let end = i + 1;
-                while (end < len && text[end] !== q) {
-                    if (text[end] === '\\') end++;
-                    end++;
-                }
-                if (end < len) end++;
-                out += `<span class="t-str">${escape(text.substring(i, end))}</span>`;
-                i = end;
-                continue;
-            }
-            
-            // 3. Comments
-            if (text.startsWith("//", i)) {
-                let end = text.indexOf("\n", i);
-                if (end === -1) end = len;
-                out += `<span class="t-comm">${escape(text.substring(i, end))}</span>`;
-                i = end;
-                continue;
-            }
-            
-            // 4. Keywords & Objects (Purple/Blue)
-            // Only process if start of a word
-            if (/[a-zA-Z_$]/.test(text[i])) {
-                let end = i;
-                while (end < len && /[a-zA-Z0-9_$]/.test(text[end])) end++;
-                const word = text.substring(i, end);
-                
-                if (keywords.has(word)) out += `<span class="t-key">${word}</span>`;
-                else if (objects.has(word)) out += `<span class="t-obj">${word}</span>`;
-                else out += word; // Already safe chars
-                
-                i = end;
-                continue;
-            }
-            
-            // 5. Default
-            out += escape(text[i]);
-            i++;
+            parts[i] = part;
         }
 
-        hContent.innerHTML = out + "\n";
+        // 4. JOIN back together
+        hContent.innerHTML = parts.join("") + "\n";
         lNums.innerHTML = Array.from({length: text.split('\n').length}, (_, i) => i + 1).join('<br>');
     };
-    
-    function escape(s) {
-        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
 
     editor.oninput = () => updateHigh(editor.value);
 
