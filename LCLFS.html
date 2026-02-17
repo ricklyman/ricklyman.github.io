@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IDE v7.3: Project Search & Verified Network Hook</title>
+    <style>
+        :root {
+            --primary: #1877f2; --border: #ddd; --header-bg: #1877f2; --header-text: #fff;
+            --sidebar-bg: #fff; --sidebar-text: #333; --editor-bg: #282c34; --editor-text: #abb2bf;
+            --line-num-bg: #21252b; --line-num-text: #636d83;
+        }
+        body.midnight { --editor-bg: #000; --sidebar-bg: #111; --sidebar-text: #0f0; --border: #333; --header-bg: #000; --header-text: #0f0; --line-num-bg: #000; --line-num-text: #0f0; }
+        body.light { --editor-bg: #fff; --editor-text: #222; --sidebar-bg: #f8f9fa; --border: #ccc; --line-num-bg: #f0f0f0; --line-num-text: #999; }
+
+        body { font-family: system-ui, sans-serif; margin: 0; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        header { background: var(--header-bg); color: var(--header-text); padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 45px; flex-shrink: 0; }
+
+        .controls { padding: 8px 15px; background: #fff; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 340px; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .tab-row { display: flex; background: rgba(0,0,0,0.05); border-bottom: 1px solid var(--border); }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 10px; font-weight: bold; color: #666; }
+        .tab.active { background: var(--sidebar-bg); color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .pane { display: none; flex: 1; flex-direction: column; padding: 12px; overflow-y: auto; }
+        .pane.active { display: flex; }
+
+        /* Results & Logs */
+        .result-item { font-size: 11px; padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .result-item:hover { background: rgba(0,0,0,0.02); }
+        .match-line { color: var(--primary); font-weight: bold; margin-right: 5px; }
+
+        /* Editor Stack */
+        .workspace { flex: 1; display: grid; grid-template-rows: 1fr 140px; background: #ccc; }
+        .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; height: 100%; }
+        .editor-container { position: relative; background: var(--editor-bg); display: flex; overflow: hidden; }
+        #line-numbers { width: 40px; background: var(--line-num-bg); color: var(--line-num-text); padding: 15px 5px; text-align: right; font-family: monospace; font-size: 13px; line-height: 1.6; user-select: none; }
+        .editor-stack { flex: 1; position: relative; overflow: hidden; }
+        #editor, #highlighting { margin: 0; padding: 15px; border: 0; width: 100%; height: 100%; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; white-space: pre; position: absolute; top: 0; left: 0; box-sizing: border-box; overflow: auto; outline: none; }
+        #editor { color: transparent; background: transparent; caret-color: #fff; z-index: 2; resize: none; }
+        #highlighting { color: var(--editor-text); z-index: 1; pointer-events: none; }
+
+        #console { flex: 1; background: #1e1e1e; color: #d4d4d4; padding: 10px; font-family: monospace; font-size: 11px; overflow-y: auto; border-top: 2px solid #333; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; margin-bottom: 8px; box-sizing: border-box; }
+        button { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; font-size: 11px; background: #e4e6eb; }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-run { background: #42b72a; color: white; }
+        .t-tag { color: #e06c75; } .t-attr { color: #d19a66; } .t-str { color: #98c379; } .t-key { color: #c678dd; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>Local IDE v7.3</div>
+    <div id="file-label" style="font-size: 11px; opacity: 0.7;">Ready</div>
+</header>
+
+<div class="controls">
+    <button class="btn-blue" id="openDirBtn">Open Folder</button>
+    <button class="btn-run" id="runBtn" disabled>▶ Run</button>
+    <button id="saveBtn" disabled>Save (Ctrl+S)</button>
+    <button id="newFileBtn" disabled>+ File</button>
+    <button id="newFolderBtn" disabled>+ Folder</button>
+</div>
+
+<div class="main-layout">
+    <div class="sidebar">
+        <div class="tab-row">
+            <div class="tab active" onclick="switchTab('explorer')">FILES</div>
+            <div class="tab" onclick="switchTab('network')">NETWORK</div>
+            <div class="tab" onclick="switchTab('tools')">TOOLS</div>
+        </div>
+
+        <div id="explorerPane" class="pane active">
+            <input type="text" id="fileFilter" placeholder="Filter filenames...">
+            <div id="tree-root"></div>
+        </div>
+
+        <div id="networkPane" class="pane">
+            <div style="font-size: 10px; color: #888; margin-bottom: 10px; display: flex; justify-content: space-between;">
+                TRAFFIC MONITOR <span onclick="document.getElementById('netList').innerHTML=''" style="cursor:pointer; color:var(--primary);">CLEAR</span>
+            </div>
+            <div id="netList"></div>
+        </div>
+
+        <div id="toolsPane" class="pane">
+            <div style="font-weight:bold; margin-bottom:10px; font-size:11px;">PROJECT-WIDE SEARCH</div>
+            <input type="text" id="searchAll" placeholder="Find text in all files...">
+            <button class="btn-blue" id="searchAllBtn" style="width:100%; margin-bottom:10px;">Deep Search</button>
+            <div id="searchResults" style="max-height: 200px; overflow-y: auto;"></div>
+
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+            <div style="font-weight:bold; margin-bottom:10px; font-size:11px;">GLOBAL REPLACE</div>
+            <input type="text" id="gFind" placeholder="Replace this...">
+            <input type="text" id="gReplace" placeholder="With this...">
+            <button class="btn-blue" id="gReplaceBtn" style="width:100%;">Global Swap</button>
+
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+            <div style="font-weight:bold; margin-bottom:10px; font-size:11px;">THEMES</div>
+            <button onclick="setTheme('')" style="width:100%; margin-bottom:5px;">One Dark</button>
+            <button onclick="setTheme('light')" style="width:100%; margin-bottom:5px; background:#fff;">Light Mode</button>
+            <button onclick="setTheme('midnight')" style="width:100%; background:#000; color:#0f0;">Midnight</button>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <div class="panes">
+            <div class="editor-container">
+                <div id="line-numbers">1</div>
+                <div class="editor-stack">
+                    <pre id="highlighting"><code id="h-content"></code></pre>
+                    <textarea id="editor" spellcheck="false" placeholder="Select a file..."></textarea>
+                </div>
+            </div>
+            <iframe id="preview" style="width:100%; height:100%; border:none; background:white;"></iframe>
+        </div>
+        <div id="console">> IDE Ready. Network hook verified.</div>
+    </div>
+</div>
+
+<script>
+    let rootHandle, currentFileHandle;
+    const editor = document.getElementById('editor');
+    const hContent = document.getElementById('h-content');
+    const consoleEl = document.getElementById('console');
+    const lineNumbers = document.getElementById('line-numbers');
+
+    function log(msg, err = false) {
+        const d = document.createElement('div');
+        if(err) d.style.color = 'var(--danger)';
+        d.textContent = `> ${msg}`;
+        consoleEl.appendChild(d); consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+    function switchTab(t) {
+        document.querySelectorAll('.tab, .pane').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.tab[onclick="switchTab('${t}')"]`).classList.add('active');
+        document.getElementById(`${t}Pane`).classList.add('active');
+    }
+    function setTheme(t) { document.body.className = t; }
+
+    function sanitize(text) { return text.replace(/<span class="t-[a-z]+">/gi, "").replace(/<\/span>/gi, "").replace(/##[A-Z_]+##/g, ""); }
+    function applyHighlight(text) {
+        let code = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        code = code.replace(/(&lt;\/?[a-z1-6!]+)/gi, '##T_S##$1##T_E##');
+        code = code.replace(/(\s)([a-z-]+)(?==)/gi, '$1##A_S##$2##A_E##');
+        code = code.replace(/"(.*?)"/g, '##S_S##"$1"##S_E##');
+        code = code.replace(/\b(let|const|var|function|return|if|else|class)\b/g, '##K_S##$1##K_E##');
+        return code.replace(/##T_S##/g, '<span class="t-tag">').replace(/##T_E##/g, '</span>')
+                   .replace(/##A_S##/g, '<span class="t-attr">').replace(/##A_E##/g, '</span>')
+                   .replace(/##S_S##/g, '<span class="t-str">').replace(/##S_E##/g, '</span>')
+                   .replace(/##K_S##/g, '<span class="t-key">').replace(/##K_E##/g, '</span>');
+    }
+
+    // --- RUN & VERIFIED NETWORK HOOK ---
+    document.getElementById('runBtn').onclick = () => {
+        log("Compiling & Injecting Hook...");
+        const code = sanitize(editor.value);
+        const hook = `
+        <script>
+            (function() {
+                const netLog = (d) => window.parent.postMessage({type:'network', ...d}, '*');
+                const originalFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    const url = args[0] instanceof Request ? args[0].url : args[0];
+                    const method = (args[1] && args[1].method) || 'GET';
+                    try {
+                        const res = await originalFetch.apply(this, args);
+                        netLog({ url, method, status: res.status });
+                        return res;
+                    } catch(e) { netLog({ url, method, status: 'BLOCKED/FAILED' }); throw e; }
+                };
+            })();
+        <\/script>`;
+        const blob = new Blob([`<html><body>${hook}${code}</body></html>`], {type: 'text/html'});
+        document.getElementById('preview').src = URL.createObjectURL(blob);
+    };
+
+    window.addEventListener('message', (e) => {
+        if (e.data.type === 'network') {
+            const list = document.getElementById('netList');
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML = `<b>[${e.data.method}]</b> ${e.data.url} (${e.data.status})`;
+            list.prepend(item);
+        }
+    });
+
+    // --- DEEP SEARCH ---
+    document.getElementById('searchAllBtn').onclick = async () => {
+        const query = document.getElementById('searchAll').value.toLowerCase();
+        const results = document.getElementById('searchResults');
+        results.innerHTML = "";
+        if (!query || !rootHandle) return;
+
+        async function scan(handle) {
+            for await (const entry of handle.values()) {
+                if(entry.kind === 'directory') await scan(entry);
+                else {
+                    const text = await (await entry.getFile()).text();
+                    const lines = text.split('\n');
+                    lines.forEach((l, idx) => {
+                        if(l.toLowerCase().includes(query)) {
+                            const div = document.createElement('div');
+                            div.className = 'result-item';
+                            div.innerHTML = `📄 <b>${entry.name}</b> <span class="match-line">L${idx+1}</span>: <i>${l.trim().substring(0,30)}...</i>`;
+                            div.onclick = () => loadFile(entry);
+                            results.appendChild(div);
+                        }
+                    });
+                }
+            }
+        }
+        await scan(rootHandle);
+    };
+
+    // --- SYSTEM ---
+    async function buildTree(handle, container, filter = "") {
+        container.innerHTML = "";
+        const entries = []; for await (const e of handle.values()) entries.push(e);
+        entries.sort((a,b) => (b.kind==='directory') - (a.kind==='directory') || a.name.localeCompare(b.name));
+        for (const entry of entries) {
+            if (filter && entry.kind === 'file' && !entry.name.toLowerCase().includes(filter.toLowerCase())) continue;
+            const row = document.createElement('div');
+            row.className = `tree-row ${currentFileHandle?.name === entry.name ? 'active' : ''}`;
+            row.innerHTML = `<span>${entry.kind==='directory'?'📁':'📄'} ${entry.name}</span>`;
+            if (entry.kind === 'directory') {
+                const sub = document.createElement('div'); sub.className = 'tree-item'; sub.style.display = filter ? 'block' : 'none';
+                row.onclick = () => sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+                container.appendChild(row); container.appendChild(sub);
+                await buildTree(entry, sub, filter);
+            } else {
+                row.onclick = () => loadFile(entry); container.appendChild(row);
+            }
+        }
+    }
+
+    async function loadFile(h) {
+        currentFileHandle = h;
+        editor.value = sanitize(await (await h.getFile()).text());
+        hContent.innerHTML = applyHighlight(editor.value) + "\n";
+        document.getElementById('saveBtn').disabled = document.getElementById('runBtn').disabled = false;
+        document.getElementById('file-label').textContent = h.name;
+        lineNumbers.innerHTML = Array.from({length: editor.value.split('\n').length}, (_, i) => i + 1).join('<br>');
+    }
+
+    document.getElementById('openDirBtn').onclick = async () => {
+        rootHandle = await window.showDirectoryPicker();
+        await buildTree(rootHandle, document.getElementById('tree-root'));
+        document.getElementById('newFileBtn').disabled = document.getElementById('newFolderBtn').disabled = false;
+    };
+    document.getElementById('saveBtn').onclick = async () => {
+        const w = await currentFileHandle.createWritable();
+        await w.write(sanitize(editor.value)); await w.close(); log(`Saved: ${currentFileHandle.name}`);
+    };
+    document.getElementById('gReplaceBtn').onclick = async () => {
+        const find = document.getElementById('gFind').value;
+        const replace = document.getElementById('gReplace').value;
+        if (!find || !rootHandle) return;
+        async function run(h) {
+            for await (const e of h.values()) {
+                if(e.kind==='directory') await run(e);
+                else {
+                    let t = await (await e.getFile()).text();
+                    if(t.includes(find)) {
+                        const w = await e.createWritable();
+                        await w.write(t.split(find).join(replace)); await w.close();
+                    }
+                }
+            }
+        }
+        await run(rootHandle); log("Replacement Finished.");
+    };
+
+    editor.oninput = () => { hContent.innerHTML = applyHighlight(editor.value) + "\n"; };
+    editor.onscroll = () => { lineNumbers.scrollTop = editor.scrollTop; document.getElementById('highlighting').scrollTop = editor.scrollTop; };
+    document.getElementById('fileFilter').oninput = (e) => buildTree(rootHandle, document.getElementById('tree-root'), e.target.value);
+
+    document.getElementById('newFileBtn').onclick = async () => {
+        const n = prompt("File name:"); if (n) { await rootHandle.getFileHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }
+    };
+    document.getElementById('newFolderBtn').onclick = async () => {
+        const n = prompt("Folder name:"); if (n) { await rootHandle.getDirectoryHandle(n, {create:true}); await buildTree(rootHandle, document.getElementById('tree-root')); }
+    };
+</script>
+</body>
+</html>
