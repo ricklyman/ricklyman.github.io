@@ -42,3 +42,527 @@ return false;
 
 </head>
 <body>
+
+<div class="ui secondary  menu">
+  <a class="active item" href="./">
+    <h3>Home</h3>
+  </a>
+  <a class="item" href="./messages.html">
+    Messages
+  </a>
+    <a class="item" href="./contacts.html">
+        Contacts
+    </a>
+    <a class="item"  href="./carts.html">
+        Carts
+    </a>
+    <a class="item"  href="./licenses.html">
+        Licenses
+    </a>
+    <a class="item"  href="./registration.html">
+        Registration
+    </a>
+    <a class="item"  href="https://github.com/ricklyman/experimental" target="_blank">
+      GitHub
+  </a>
+  <a class="item"  href="./github.html">
+    Search GitHub
+</a>
+
+
+
+  <div class="right menu">
+    <div class="ui search">
+      <div class="ui icon input">
+        <input class="prompt" type="text" placeholder="Search localstorage..." id="test2">
+        <i class="search icon"></i>
+      </div>
+      <div class="results"></div>
+   </div>
+   <a class="item"  href="./login.html">
+    Login
+</a>
+
+ </div>
+</div>
+
+<form id="editor" name="editor" onsubmit="return setAction(this)" method="POST">
+
+ <fieldset>
+   <legend><h3>Name / Value</h3></legend>
+   <p>
+     <input class="ui button" type="file" id="file-selector" multiple>
+   </p>
+
+   <!-- associated label -->
+    <!-- <label for="name">Name</label> -->
+    <p>
+      <label><b>Name </b>
+          <input id="name" value="foo" name="name" size="60"></label>
+      <input class="mini ui teal button" value="Edit" onclick="doGetItem()" type="button">
+
+      <input class="mini ui teal button" value="Save" onclick="doSetItem()" type="button">
+      <input class="mini ui teal button" value="Run" onclick="doEvalItem()" type="button">
+      <input class="mini ui teal button" value="Save to File" onclick="save(localStorage.getItem(document.forms.editor.name.value))" type="button">
+
+      <input class="mini ui teal teal button" value="Delete" onclick="doRemoveItem()" type="button">
+      <button class="mini ui teal button" onclick="newNote(event)">Display</button>
+
+    </p>
+    <label for="value"><b>Value</b></label>
+    <p>
+      <textarea id="value" name="data" cols="80" rows="20">bar</textarea>
+
+    </p>
+   <div>
+    <input class="mini ui teal button" id="submit" onclick="viewServer(event)" value="View Server">
+     <input class="mini ui teal button" id="submit" onclick="saveToServer(event)" value="Save to Server">
+     <input class="mini ui teal button" id="export" onclick="exportData(event)" value="Export Data">
+   </div>
+  </fieldset>
+
+  <div class="ui message">
+    <div class="header" id="resultHeader">
+      L O G
+    </div>
+    <p><div id="result"></div></p>
+    <p><div id="result2"></div></p>
+  </div>
+
+</form>
+<div id="items_table">
+  <fieldset>
+    <legend><h3>Items</h3></legend>
+
+    <table class="ui compact striped table" id="pairs"><tbody><tr><th>Index</th><th>Name</th></tr></tbody></table>
+  </fieldset>
+</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js"></script>
+<script>
+  function newNote(event) {
+    event.preventDefault();
+    // //alert(document.forms.editor.name.value);
+    // var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    // result.innerHTML = localStorage.getItem(document.forms.editor.name.value);
+    // var resultHeader = document.getElementById('resultHeader');
+    // resultHeader.innerHTML = document.forms.editor.name.value;
+
+    let newWindow = open('./empty.html', 'example', 'width=300,height=300')
+      newWindow.focus();
+          // Create the element
+
+      var script = newWindow.document.createElement("script");
+
+      // Add script content
+
+     script.innerHTML = "alert('window on load'); ";
+     script.innerHTML = script.innerHTML + "function test(text) {alert(text);}"
+
+      // Append
+
+     newWindow.document.head.appendChild(script);
+  
+      //alert(newWindow.location.href); // (*) about:blank, loading hasn't started yet
+      
+      newWindow.onload = function() {
+      
+      // Create the element
+
+    //  var script = document.createElement("script");
+
+      // Add script content
+
+     // script.innerHTML = "alert('window on load')";
+
+      // Append
+
+    //  document.head.appendChild(script);
+      
+        //let html = '<div style="font-size:30px">Welcome!<br/>"' + document.forms.editor.name.value + '"</div>`;
+        
+        let html = localStorage.getItem(document.forms.editor.name.value);
+        
+         // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = document.forms.editor.name.value;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "D i s p l a y";
+
+
+        //document.forms.editor.name.value;
+        newWindow.document.body.insertAdjacentHTML('afterbegin', "<pre>" + html + "</pre>");
+
+      };
+
+
+  }
+</script>
+<script>
+  function exportData(event) {
+    event.preventDefault();
+
+    let newWindow = open('./empty.html', 'example', 'width=300,height=300')
+
+
+    // //alert(document.forms.editor.name.value);
+    // var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    // result.innerHTML = localStorage.getItem(document.forms.editor.name.value);
+    // var resultHeader = document.getElementById('resultHeader');
+    // resultHeader.innerHTML = document.forms.editor.name.value;
+
+    
+
+    var txt = '<?xml version="1.0" encoding="utf-8"?>\n<STUDENTS>\n';
+    //for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < localStorage.length; i++) {
+   //   
+   //   txt = txt + ('<student>' + localStorage.key(i) + '</student>\n<age>' + JSON.stringify(getItem(localStorage.key(i))+ '</age>\n')); 
+//
+   txt = txt + '<student>' + JSON.stringify(localStorage.key(i)) + '</student>\n<age>' + JSON.stringify(localStorage.getItem(localStorage.key(i))) + '</age>\n'; 
+    };
+    txt = txt + "</STUDENTS>\n";
+
+    //alert(txt);
+
+var txt2 = "";
+    txt2 = txt2 + '<script>xmlDoc=' + txt + ';' 
+    txt2 = txt2 + 'document.write("<table><tr><th>Students</th><th>Age</th></tr>");'
+    txt2 = txt2 + 'var x = xmlDoc.getElementsByTagName("student");'
+    txt2 = txt2 + 'for (i=0;i<x.length;i++)'
+    txt2 = txt2 + '{ '
+    txt2 = txt2 + 'document.write("<tr><td>");'
+    txt2 = txt2 + 'document.write(x[i].getElementsByTagName("name")[0].childNodes[0].nodeValue);'
+    txt2 = txt2 + 'document.write("</td><td>");'
+    txt2 = txt2 + 'document.write(x[i].getElementsByTagName("age")[0].childNodes[0].nodeValue);'
+    txt2 = txt2 + 'document.write("</td></tr>");'
+    txt2 = txt2 + ' }'
+    txt2 = txt2 + 'document.write("</table>");'
+    txt2 = txt2 + '<\/script>'
+   
+
+      newWindow.focus();
+      
+      //alert(newWindow.location.href); // (*) about:blank, loading hasn't started yet
+      
+      newWindow.onload = function() {
+        //let html = '<div style="font-size:30px">Welcome!<br/>"' + document.forms.editor.name.value + '"</div>`;
+        
+        let html = localStorage.getItem(document.forms.editor.name.value);
+        
+         // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = localStorage.length + ' records';
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "E x p o r t";
+
+    
+ 
+
+        //document.forms.editor.name.value;
+        newWindow.document.body.insertAdjacentHTML('afterbegin', txt);
+       // newWindow.document.body.insertAdjacentHTML('afterbegin', txt2);
+        //newWindow.document.body.insertAdjacentHTML('afterbegin', '<script>xmlDoc=' + txt + '<\/script>') 
+
+      };
+
+
+  }
+</script>
+
+<script>
+  function saveToServer(event) {
+    event.preventDefault();
+    // //alert(document.forms.editor.name.value);
+    // var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    // result.innerHTML = localStorage.getItem(document.forms.editor.name.value);
+    // var resultHeader = document.getElementById('resultHeader');
+    // resultHeader.innerHTML = document.forms.editor.name.value;
+
+    let newWindow = open('../edit/' + document.forms.editor.name.value, 'example', 'width=300,height=300')
+      newWindow.focus();
+      
+      //alert(newWindow.location.href); // (*) about:blank, loading hasn't started yet
+      
+      newWindow.onload = function() {
+        //let html = '<div style="font-size:30px">Welcome!<br/>"' + document.forms.editor.name.value + '"</div>`;
+        
+        let html = localStorage.getItem(document.forms.editor.name.value);
+        
+         // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = document.forms.editor.name.value;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "S a v e  to  S e r v er";
+
+
+        //document.forms.editor.name.value;
+        // <textarea name="body" rows="20" cols="80"></textarea>
+        newWindow.document.getElementsByName('body')[0].insertAdjacentHTML('beforeend', "\n\n" + html);
+
+        //newWindow.document.body.insertAdjacentHTML('afterbegin', html);
+
+      };
+
+
+  }
+</script>
+<script>
+  function viewServer(event) {
+    event.preventDefault();
+    // //alert(document.forms.editor.name.value);
+    // var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    // result.innerHTML = localStorage.getItem(document.forms.editor.name.value);
+    // var resultHeader = document.getElementById('resultHeader');
+    // resultHeader.innerHTML = document.forms.editor.name.value;
+
+    let newWindow = open('../view/' + document.forms.editor.name.value, 'example', 'width=300,height=300')
+      newWindow.focus();
+      
+      //alert(newWindow.location.href); // (*) about:blank, loading hasn't started yet
+      
+      newWindow.onload = function() {
+        //let html = '<div style="font-size:30px">Welcome!<br/>"' + document.forms.editor.name.value + '"</div>`;
+        
+        let html = localStorage.getItem(document.forms.editor.name.value);
+        
+         // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = document.forms.editor.name.value;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "V i e w   S e r v er";
+
+
+        //document.forms.editor.name.value;
+        // <textarea name="body" rows="20" cols="80"></textarea>
+        //newWindow.document.getElementsByName('body')[0].insertAdjacentHTML('beforeend', "\n" + html);
+
+        //newWindow.document.body.insertAdjacentHTML('afterbegin', html);
+
+      };
+
+
+  }
+</script>
+
+
+<script>
+  //doGetItem()
+  //doSetItem()
+  //doRemoveItem()
+  function doSetItem() {
+    var name = document.forms.editor.name.value;
+    var data = document.forms.editor.data.value;
+
+    // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = name;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "S a v e";
+
+     localStorage.setItem(name, data);
+ // localStorage.setItem(name, data);
+    sync('GET',name,data);
+    doShowAll();
+  }
+
+  function doGetItem() {
+    var name = document.forms.editor.name.value;
+    //var name = document.getElementById('test2');
+    //alert(name.value);
+    document.forms.editor.data.value = localStorage.getItem(name);
+    doShowAll();
+
+    // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = name;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "E d i t";
+
+
+  }
+
+  function doRemoveItem() {
+    var name = document.forms.editor.name.value;
+
+    document.forms.editor.data.value = localStorage.removeItem(name);
+    doShowAll();
+
+// //alert(document.forms.editor.name.value);
+var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = name;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "D e l e t e";
+
+
+  }
+
+  function setForm(name) {
+    document.forms.editor.name.value = name;
+    document.forms.editor.data.value = localStorage.getItem(name);
+  }
+
+  //doShowAll();
+  function doShowAll() {
+    var key = "";
+    var pairs = "<tr><th>Name</th><th>Value</th></tr>\n";
+    var i=0;
+
+    for (i=0; i<=localStorage.length-1; i++) {
+      key = localStorage.key(i);
+      //  pairs += "<tr><td>"+key+"</td>\n<td onClick=\"setForm('" + key + "')\">"+localStorage.getItem(key)+"</td></tr>\n";
+      pairs += "<tr><td>"+i+"</td>\n<td onClick=\"setForm('" + key + "')\">"+key+"</td></tr>\n";
+    }
+
+    if (pairs == "<tr><th>Name</th><th>Value</th></tr>\n") {
+      pairs += "<tr><td><i>empty</i></td>\n<td><i>empty</i></td></tr>\n";
+    }
+
+    document.getElementById('pairs').innerHTML = pairs;
+  }
+
+  async function save( blob ) {
+
+             // //alert(document.forms.editor.name.value);
+             var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = document.forms.editor.name.value;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "F i l e";
+
+   // create handle to a local file chosen by the user
+   const handle = await window.showSaveFilePicker();
+   // create writable stream
+   const stream = await handle.createWritable();
+
+   // write the data
+   await stream.write(blob);
+   // save and close the file
+   await stream.close();
+}
+
+   function doEvalItem() {
+     var name = document.forms.editor.name.value;
+
+         // //alert(document.forms.editor.name.value);
+         var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = name;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = "R u n";
+
+     eval(localStorage.getItem(name));
+     doShowAll();
+
+   }
+</script>
+
+<script>
+  //https://web.dev/read-files/
+  const fileSelector = document.getElementById('file-selector');
+  fileSelector.addEventListener('change', (event) => {
+  const fileList = event.target.files;
+  //console.log(fileList);
+  //	  localStorage.setItem('fileList', JSON.stringify(fileList)); //object to do json stringify...
+  //	  localStorage.setItem('fileList', JSON.stringify(event)); //object to do json stringify...
+
+  //	  document.forms.editor.name.value = 'fileList';
+  //	  document.forms.editor.data.value = localStorage.getItem('fileList');
+  getMetadataForFileList(fileList);
+});
+
+function getMetadataForFileList(fileList) {
+  for (const file of fileList) {
+    // Not supported in Safari for iOS.
+    const name = file.name ? file.name : 'NOT SUPPORTED';
+    // Not supported in Firefox for Android or Opera for Android.
+    const type = file.type ? file.type : 'NOT SUPPORTED';
+    // Unknown cross-browser support.
+    const size = file.size ? file.size : 'NOT SUPPORTED';
+    //console.log({file, name, type, size});
+    localStorage.setItem('path...' + name, '[name:' + name + ', type:' + type + ', size:' + size + ']'); //object to do json stringify...
+
+    document.forms.editor.name.value = name + ':path/content...';
+    document.forms.editor.data.value = localStorage.getItem(name);
+  }
+}
+</script>
+<script>
+  // searches across any array/object of searchable objects
+  var
+  content = [];
+  content = [
+    {
+      title: 'Horse',
+      description: 'An Animal',
+    },
+    {
+      title: 'Cow',
+      description: 'Another Animal',
+    }
+  ]
+  ;
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const data = `${key}: ${localStorage.getItem(key)}`;
+    //console.log(data);
+    console.log(JSON.stringify(data));
+    console.log(JSON.parse(JSON.stringify(data)));
+
+    try {
+     console.log('{title: ' + JSON.stringify(localStorage.key(i)) + ', description: ' + JSON.stringify(localStorage.key(i)) + '}');
+    // works content.push(JSON.parse('{"title": ' + JSON.stringify(localStorage.key(i)) + ', "description": ' + JSON.stringify(localStorage.key(i)) + '}'));
+    content.push(JSON.parse('{"title": ' + JSON.stringify(localStorage.key(i)) + ', "description": ' + JSON.stringify(localStorage.getItem(key)) + '}'));
+    }
+    catch(err) {
+    //document.getElementById("demo").innerHTML = err.message;
+     console.log(err);
+    }
+
+    //content.push(JSON.parse('{"title": "' + i + '", "description:"' + '" "}'));
+
+    //content.push(JSON.parse('{"title": "' + JSON.stringify(data) + '"}'));
+    //content.push(JSON.parse(localStorage.getItem(key)));
+    //content.push(data);
+    //content.push(JSON.parse("{title: '" + localStorage.key(i) + "', description:" + JSON.stringify(data) + "}"));
+  }
+  console.log(content);
+
+  $('.ui.search')
+    .search({
+      source : content,
+      searchFields   : [
+        'title',
+        'description'
+      ],
+      fullTextSearch: true
+    })
+  ;
+
+ // $('.ui.search')
+ //   .search({
+ //   apiSettings: {
+ //   url: 'https://api.github.com/search/repositories?q={query}'
+ //  },
+ //  fields: {
+ //    results : 'items',
+ //    title   : 'name',
+ //    url     : 'html_url'
+ //  },
+ //  minCharacters : 3
+ //  })
+ // ;
+</script>
+</html>
