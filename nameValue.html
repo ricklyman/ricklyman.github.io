@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Search LocalStorage</title>
+  <!-- You MUST include jQuery 3.4+ before Fomantic -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css">
+  
+  <style type="text/css">
+    body {
+      background-color: #DADADA;
+    }
+    body > .grid {
+      height: 100%;
+    }
+  </style>
+
+  <script>
+    function setAction(form) {
+//  form.action = "/save/" + document.forms.editor.name.value + `?body=${encodeURIComponent(document.forms.editor.data.value)}`; //works
+form.action = "/view/" + document.forms.editor.name.value //works + `?body=${encodeURIComponent(document.forms.editor.name.value)}`;
+form.submit();
+// location.href = "gwanRequest3.html";
+    //open("/lssave/"+ document.forms.editor.name.value );
+
+    //console.log(this);
+    //console.log(form);
+
+    // //alert(document.forms.editor.name.value);
+    var result = document.getElementById('result');
+    // //alert( localStorage.getItem(document.forms.editor.name.value));
+    result.innerHTML = form;
+    var resultHeader = document.getElementById('resultHeader');
+    resultHeader.innerHTML = this;
+
+
+
+// alert(form.action);
+return false;
+}
+  </script>
+
+</head>
+<body>
