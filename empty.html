@@ -1,3 +1,4 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
@@ -20,13 +21,13 @@
     var appPath = (url && url.search(/[?&]jsxapppath=([^&]+)/)) ? RegExp.$1 : "";
     try {
       // Firefox doesn't like this in XHTML mode:
-      document.write('<script type="text/javascript" src="https://raw.githubusercontent.com/ricklyman/generalinterface/refs/heads/master/JSX/js/JSX30.js" ' +
+      document.write('<script type="text/javascript" src="JSX/js/JSX30.js" ' +
           'jsxapppath="' + appPath + '"><'+'/script>');
     } catch (e) {
       window.setTimeout(function() {
         var script = document.createElement("script");
         script.setAttribute("type", "text/javascript");
-        script.setAttribute("src", "https://raw.githubusercontent.com/ricklyman/generalinterface/refs/heads/master/JSX/js/JSX30.js");
+        script.setAttribute("src", "JSX/js/JSX30.js");
         script.setAttribute("jsxapppath", appPath);
         document.getElementById("jsxmain").appendChild(script);
       }, 0);
