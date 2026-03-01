@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net"></script>
+</head>
+<body>
+    <div id="output"></div>
+
+    <script>
+        async function transformXml() {
+            // Fetch XML and XSL files
+            const xmlResponse = await fetch('data.xml');
+            const xslResponse = await fetch('style.xsl');
+
+            const xmlText = await xmlResponse.text();
+            const xslText = await xslResponse.text();
+
+            // Parse text into XML documents
+            const xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
+            const xslDoc = new DOMParser().parseFromString(xslText, 'application/xml');
+
+            // Create a polyfilled XSLT processor
+            const xsltProcessor = new XSLTProcessor();
+            xsltProcessor.importStylesheet(xslDoc);
+
+            // Perform the transformation
+            const resultDocument = xsltProcessor.transformToDocument(xmlDoc);
+            
+            // Append the result (usually HTML) to the DOM
+            document.getElementById('output').appendChild(resultDocument.documentElement);
+        }
+
+        transformXml();
+    </script>
+</body>
+</html>
