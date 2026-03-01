@@ -6,5 +6,7 @@
         <author>Mr. Foo</author>
         <author>Mr. Bar</author>
     </authors>
-    <body>This is my article text.</body>
+    <body>
+﻿
+data.xml:1 [Deprecation] XSLTProcessor and XSLT Processing Instructions have been deprecated by all browsers. These features will be removed from this browser soon. See https://chromestatus.com/feature/4709671889534976.</body>
 </article>
