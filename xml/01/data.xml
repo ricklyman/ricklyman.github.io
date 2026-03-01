@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="style.xsl"?>
+<ROOT>
+    <script src="https://cdn.jsdelivr.net" xmlns="http://www.w3.org/1999/xhtml"></script>
+    <article>
+    <title>My Article</title>
+    <authors>
+        <author>Mr. Foo</author>
+        <author>Mr. Bar</author>
+    </authors>
+    <body>
+﻿
+data.xml:1 [Deprecation] XSLTProcessor and XSLT Processing Instructions have been deprecated by all browsers. These features will be removed from this browser soon. See https://chromestatus.com/feature/4709671889534976.</body>
+</article>
+</ROOT>
