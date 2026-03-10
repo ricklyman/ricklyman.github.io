@@ -1,0 +1,20 @@
+<!-- index.html served from http://localhost:8080 -->
+<!DOCTYPE html>
+<html>
+<body>
+    <button onclick="fetchData()">Fetch Data from Go API</button>
+    <p id="output"></p>
+
+    <script>
+        function fetchData() {
+            // The browser will check the Go server's CORS headers when this runs
+            fetch('http://localhost:8000/') 
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('output').textContent = data;
+                })
+                .catch(error => console.error('Fetch error:', error));
+        }
+    </script>
+</body>
+</html>
