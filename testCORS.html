@@ -8,7 +8,7 @@
     <script>
         function fetchData() {
             // The browser will check the Go server's CORS headers when this runs
-            fetch('http://localhost:8000/') 
+            fetch('http://localhost:5173/') 
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('output').textContent = data;
