@@ -2,8 +2,10 @@
 <!DOCTYPE html>
 <html>
 <body>
-    <button onclick="fetchData()">Fetch Data from Go API</button>
+    <button onclick="fetchData()">Fetch "/" Data from Go API</button>
     <p id="output"></p>
+    <button onclick="fetchIndex()">Fetch index from Go API</button>
+    <p id="outputIndex"></p>
 
     <script>
         function fetchData() {
@@ -15,6 +17,16 @@
                 })
                 .catch(error => console.error('Fetch error:', error));
         }
+        function fetchIndex() {
+            // The browser will check the Go server's CORS headers when this runs
+            fetch('http://localhost:5173/index') 
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('outputIndex').textContent = data;
+                })
+                .catch(error => console.error('Fetch error:', error));
+        }
+        
     </script>
 </body>
 </html>
