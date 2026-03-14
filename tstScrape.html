@@ -1,0 +1,48 @@
+<script type='text/javascript'>
+function noref_request(site_url){
+   var virtualForm = 'data:text/html,<form id="genform" action="http://' + site_url + '" method="GET"><input type="submit"></form> <script>genform.submit()<\/script>';  
+
+   var iframe = document.createElement('iframe');
+   iframe.frameBorder=0;
+   iframe.width= window.innerWidth ;  
+   iframe.height= "350px";
+   iframe.seamless='seamless';
+   iframe.id="frame_"+Math.floor(Math.random()*1000);
+   iframe.setAttribute("src", virtualForm); 
+   document.getElementById("response").appendChild(iframe); 
+} 
+function clear_response()
+{
+    var node = document.getElementById("response");
+    while (node.hasChildNodes()) {
+		node.removeChild(node.lastChild);
+	}
+	return;
+}
+</script>
+<h2>JavaScript Loader</h2> 
+<label for='site' value='check site for "No referer" header' >Check a website if it allows empty <em>Referer</em> header:</label>&nbsp;
+http://<input type='text' length=20 name='site' id='site' placeholder='domain.com'>&nbsp;
+<button onclick='noref_request(document.getElementById("site").value); return false;'><strong>No Referer</strong> load</button>
+<p class='low'>
+    Choose from some:&nbsp; 
+	 <span class='link' hfer='#' onclick="javascript:noref_request(this.innerText); return false;">amazon.com</span>&nbsp;
+	 <span class='link' hfer='#' onclick="javascript:noref_request(this.innerText); return false;">ebay.com</span>&nbsp;
+	 <span class='link' hfer='#' onclick="javascript:noref_request(this.innerText); return false;">cnn.com</span>&nbsp;
+	 <span class='link' hfer='#' onclick="javascript:noref_request(this.innerText); return false;">yfrog.com</span>&nbsp;
+	 <span class='link' hfer='#' onclick="javascript:noref_request(this.innerText); return false;">myspace.com</span>&nbsp;
+	 <span class='link' hfer='#' onclick="javascript:noref_request(this.innerText); return false;">jquery.com</span>
+</p>
+
+ 
+<h4>Extracted sites in frames:&nbsp;&nbsp;<button onclick='clear_response(); return false;'>Clear all extractions</button></h4>
+<div id='response'></div>  
+<style>
+.low{ font-size:0.8em }
+.link {
+	color: blue;	
+	cursor: pointer;
+} .link:hover {
+	text-decoration: underline;
+}
+</style>
