@@ -22,6 +22,7 @@
             fetch('http://localhost:5173/index') 
                 .then(response => response.text())
                 .then(data => {
+                    console.log(data);
                     document.getElementById('outputIndex').innerHTML = data;
                 })
                 .catch(error => console.error('Fetch error:', error));
