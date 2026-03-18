@@ -1,36 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimal Template</title>
-    <!-- https://www.w3schools.com/howto/howto_js_draggable.asp -->
-    <style>
-        .dragdiv {
-            position: absolute;
-            z-index: 10;
-            border: 1px solid #8f1818;
-            text-align: center;
-            overflow-x: scroll;
-            /* add-a-scrollbar rl */
-            overflow-y: scroll;
-            resize: both;
-            /* Remove this if you want the user to resize the textarea */
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minimal Template</title>
+<!-- https://www.w3schools.com/howto/howto_js_draggable.asp -->
+<style>
+    .dragdiv {
+        position: absolute;
+        z-index: 10;
+        border: 1px solid #8f1818;
+        text-align: center;
+        overflow-x: scroll;
+        /* add-a-scrollbar rl */
+        overflow-y: scroll;
+        resize: both;
+        /* Remove this if you want the user to resize the textarea */
+    }
    
-        .dragdivheader {
-            padding: 1px;
-            cursor: move;
-            z-index: 10;
-            background-color: #2196F3;
-            color: #fff;
-        }
-    </style>
-</head>
-<body>
-    <!-- Your content goes here -->
-</body>
-	<!-- https://www.w3schools.com/howto/howto_js_draggable.asp -->
+    .dragdivheader {
+        padding: 1px;
+        cursor: move;
+        z-index: 10;
+        background-color: #2196F3;
+        color: #fff;
+    }
+</style>
+<!-- https://www.w3schools.com/howto/howto_js_draggable.asp -->
 <script>
     function dragElement(elmnt) {
         var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
@@ -78,5 +74,10 @@
         }
     }
 </script>
+</head>
+<body>
+    <!-- Your content goes here -->
+</body>
+
 
 </html>
