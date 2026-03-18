@@ -4,8 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minimal Template</title>
+    <!-- https://www.w3schools.com/howto/howto_js_draggable.asp -->
+    <style>
+        .dragdiv {
+            position: absolute;
+            z-index: 10;
+            border: 1px solid #8f1818;
+            text-align: center;
+            overflow-x: scroll;
+            /* add-a-scrollbar rl */
+            overflow-y: scroll;
+            resize: both;
+            /* Remove this if you want the user to resize the textarea */
+        }
+   
+        .dragdivheader {
+            padding: 1px;
+            cursor: move;
+            z-index: 10;
+            background-color: #2196F3;
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
     <!-- Your content goes here -->
 </body>
+	<!-- https://www.w3schools.com/howto/howto_js_draggable.asp -->
+<script>
+    // Make the DIV element draggable:
+    dragElement(document.getElementById("mydiv"));
+    dragElement(document.getElementById("mydiv1"));
+    dragElement(document.getElementById("mydiv2"));
+    dragElement(document.getElementById("mydiv3"));
+    dragElement(document.getElementById("mydiv4"));
+    dragElement(document.getElementById("mydiv5"));
+    dragElement(document.getElementById("mydiv6"));
+    dragElement(document.getElementById("mydiv7"));
+    dragElement(document.getElementById("mydiv8"));
+    dragElement(document.getElementById("mydiv9"));
+    dragElement(document.getElementById("mydiv10"));
+    dragElement(document.getElementById("mydiv11"));
+    dragElement(document.getElementById("mydiv12"));
+    dragElement(document.getElementById("mydiv13"));
+    dragElement(document.getElementById("mydiv14"));
+    dragElement(document.getElementById("mydiv15"));
+    dragElement(document.getElementById("mydiv16"));
+    dragElement(document.getElementById("mydiv17"));
+    dragElement(document.getElementById("mydiv18"));
+    dragElement(document.getElementById("mydiv19"));
+    dragElement(document.getElementById("mydiv20"));
+    dragElement(document.getElementById("mydiv21"));
+    dragElement(document.getElementById("mydiv22"));
+    dragElement(document.getElementById("mydiv23"));
+    dragElement(document.getElementById("mydiv24"));
+    dragElement(document.getElementById("mydiv25"));
+    dragElement(document.getElementById("mydiv26"));
+    dragElement(document.getElementById("mydiv27"));
+
+
+    function dragElement(elmnt) {
+        var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        if (document.getElementById(elmnt.id + "header")) {
+            // if present, the header is where you move the DIV from:
+            document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+        } else {
+            // otherwise, move the DIV from anywhere inside the DIV:
+            elmnt.onmousedown = dragMouseDown;
+        }
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // get the mouse cursor position at startup:
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // call a function whenever the cursor moves:
+            document.onmousemove = elementDrag;
+        }
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // calculate the new cursor position:
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            if ((elmnt.offsetLeft - pos1) > -9) { elmnt.style.left = (elmnt.offsetLeft - pos1) + "px"; }
+            if (pos4 > 0) {
+                if ((elmnt.offsetLeft - pos1) < -9) { elmnt.style.top = (pos4) + "px"; }
+            }
+            if ((elmnt.offsetTop - pos2) > -9) { elmnt.style.top = (elmnt.offsetTop - pos2) + "px"; }
+            if (pos3 > 0) {
+                if ((elmnt.offsetTop - pos2) < -9) { elmnt.style.left = (pos3) + "px"; }
+            }
+            // set the element's new position:
+            //elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            //elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+        }
+        function closeDragElement() {
+            // stop moving when mouse button is released:
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+</script>
+
 </html>
