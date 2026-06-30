@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Touch & Mouse Demo</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; }
+        #log { 
+            font-family: monospace;
+            white-space: pre;
+            width: 450px; 
+            height: 200px; 
+            border: 1px solid #ccc; 
+            overflow-y: scroll; 
+            padding: 10px; 
+            margin-top: 10px; 
+            background: #f9f9f9; 
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10; /* Keep it above the tracking area */
+        }
+        #ui {
+            position: absolute;
+            top: 20px; bottom: 20px;
+            left: 20px; right: 20px;
+            border: 2px dotted grey;
+            background: #fff;
+        }
+        .point {
+            position: absolute;
+            font-size: 200%;
+            pointer-events: none; /* Prevents element from blocking mouse moves */
+        }
+        .point.fade {
+            opacity: 0.25;
+        }
+        #connection-status {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="connection-status">
+        <h2>WebSocket Touch/Mouse Client</h2>
+        <div id="statusText"><b style='color: orange;'>Connecting...</b></div>
+    </div>
+    
+    <div id="log"></div>
+    <div id="ui"></div>
+
+    <script>
+        // --- DYNAMIC IP DETECTION ---
+        // Dynamically detects whatever IP address was used to load the webpage.
+        // This ensures networked machines talk back to the host machine automatically.
+        const targetIP = window.location.hostname;
+        const socket = new WebSocket(`ws://${targetIP}:8080/ws`);
+        // -----------------------------
+
+        const logDiv = document.getElementById("log");
+        const statusText = document.getElementById("statusText");
+        const ui = document.getElementById('ui');
+
+        let isConnected = false;
+
+        socket.onopen = (event) => {
+            statusText.innerHTML = "<b style='color: green;'>Connected to server! Streaming interaction data...</b>";
+            isConnected = true;
+        };
+
+        socket.onmessage = (event) => {
+            // Optional: Handle response echoes from the server if needed
+        };
+
+        socket.onclose = (event) => {
+            statusText.innerHTML = "<b style='color: red;'>Disconnected from server.</b>";
+            isConnected = false;
+        };
+
+        // Touch/Mouse Tracker Logic
+        var displayTimeout = null;
+        function display(e, p) {
+            var msg = e.type + " @ " + p.clientX + ", " + p.clientY;
+            logDiv.textContent += msg + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            e.preventDefault();     // Prevent default scrolling/gestures
+            
+            // --- STREAM TO WEBSOCKET ---
+            if (isConnected) {
+                socket.send(JSON.stringify({
+                    event: e.type,
+                    x: p.clientX,
+                    y: p.clientY
+                }));
+            }
+            // ---------------------------
+            
+            clearTimeout(displayTimeout);
+            displayTimeout = setTimeout(function () {   // log a newline during pauses
+                logDiv.textContent += '\n';
+            }, 500);
+        }
+        
+        var pointerEls = Object.create(null);
+        function pointer(id, p) {
+            var el = pointerEls[id];
+            if (p && !el) {
+                el = document.createElement('div');
+                el.className = 'point';
+                el.textContent = id;
+                ui.appendChild(el);
+                pointerEls[id] = el;
+            } else if (!p && el) {
+                delete pointerEls[id];
+                el.className += ' fade';
+                setTimeout(function () {
+                    if (el.parentNode) el.parentNode.removeChild(el);
+                }, 500);
+                return;
+            }
+            if (el && p) {
+                el.style.top = (p.clientY - el.clientHeight/2) + 'px';
+                el.style.left = (p.clientX - el.clientWidth/2) + 'px';
+            }
+        }
+        
+        // Mouse Listeners
+        var displayMouse = false;
+        ui.addEventListener('mousedown', function (e) {
+            display(e,e);
+            pointer('m', e);
+            displayMouse = true;
+        }, false);
+        window.addEventListener('mousemove', function (e) {
+            if (!displayMouse) return;
+            display(e,e);
+            pointer('m', e);
+        }, false);
+        window.addEventListener('mouseup', function (e) {
+            if (!displayMouse) return;
+            display(e,e);
+            pointer('m', null);
+            displayMouse = false;
+        }, false);
+        
+        // Legacy Pointer Listeners (IE/Edge)
+        var displayPointer = false;
+        ui.addEventListener('MSPointerDown', function (e) {
+            display(e,e);
+            pointer(e.pointerId, e);
+            displayPointer = true;
+        }, false);
+        window.addEventListener('MSPointerMove', function (e) {
+            if (!displayPointer) return;
+            display(e,e);
+            pointer(e.pointerId, e);
+        }, false);
+        function pointerdone(e) {
+            if (!displayPointer) return;
+            display(e,e);
+            pointer(e.pointerId, null);
+            displayPointer = false;
+        }
+        window.addEventListener('MSPointerCancel', pointerdone, false);
+        window.addEventListener('MSPointerUp', pointerdone, false);
+        
+        // Touch Listeners (Mobile/Tablets)
+        ui.addEventListener('touchstart', function (e) {
+            [].forEach.call(e.changedTouches, function (p) {
+                display(e,p);
+                pointer(p.identifier, p);
+                
+                var pid = p.identifier,
+                    tgt = e.target;
+                tgt.addEventListener('touchmove', touchmove, false);
+                tgt.addEventListener('touchcancel', touchdone, false);
+                tgt.addEventListener('touchend', touchdone, false);
+                function touchmove(e) {
+                    var p = [].filter.call(e.changedTouches, function (p) { return p.identifier === pid; })[0];
+                    if (!p) return;
+                    display(e,p);
+                    pointer(pid,p);
+                }
+                function touchdone(e) {
+                    var p = [].filter.call(e.changedTouches, function (p) { return p.identifier === pid; })[0];
+                    if (!p) return;
+                    display(e,p);
+                    pointer(pid,null);
+                    tgt.removeEventListener('touchmove', touchmove, false);
+                    tgt.removeEventListener('touchcancel', touchdone, false);
+                    tgt.removeEventListener('touchend', touchdone, false);
+                }
+            });
+        }, false);
+        
+        function justDisplay(e) { display(e,e); }
+        ui.addEventListener('gesturestart', justDisplay, false);
+        ui.addEventListener('gestureend', justDisplay, false);
+        ui.addEventListener('MSPointerOver', justDisplay, false);
+        ui.addEventListener('MSPointerOut', justDisplay, false);
+        ui.addEventListener('click', justDisplay, false);
+    </script>
+</body>
+</html>

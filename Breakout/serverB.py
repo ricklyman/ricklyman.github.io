@@ -1,0 +1,39 @@
+from aiohttp import web
+
+# Standard async request handler for HTTP
+async def handle(request):
+    name = request.match_info.get('name', "Anonymous")
+    text = f"Hello, {name}"
+    return web.Response(text=text)
+
+# WebSocket handler
+async def websocket_handler(request):
+    # Upgrade the HTTP request to a WebSocket connection
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    print("WebSocket connection established")
+
+    # Keep the connection open and listen for messages
+    async for msg in ws:
+        if msg.type == web.WSMsgType.TEXT:
+            print(f"Received message: {msg.data}")
+            # Echo the text back to the client
+            await ws.send_str(f"Server echoed: {msg.data}")
+        elif msg.type == web.WSMsgType.ERROR:
+            print(f"WebSocket connection closed with exception {ws.exception()}")
+
+    print("WebSocket connection closed")
+    return ws
+
+# Create the application and add routes
+app = web.Application()
+app.add_routes([
+    web.get('/', handle),
+    web.get('/ws', websocket_handler),  # WebSocket endpoint
+    web.get('/{name}', handle),
+])
+
+# Run the server
+if __name__ == '__main__':
+    web.run_app(app, port=8080)

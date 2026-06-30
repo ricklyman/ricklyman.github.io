@@ -1,0 +1,28 @@
+<pre><font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ pixi add websockets
+<font color="#26A269">✔ </font>Added <b>websockets</b> &gt;=16.0,&lt;17
+<font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ python3 breakout.py
+Traceback (most recent call last):
+  File &quot;/home/rlyman/breakout_2/breakout.py&quot;, line 21, in &lt;module&gt;
+    from websockets.asyncio.server import serve
+ModuleNotFoundError: No module named &apos;websockets.asyncio&apos;
+<font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ 
+</pre>
+
+in python script.py:
+
+import asyncio
+from websockets.asyncio.server import serve
+
+command line (bash):
+
+pixi add websockets
+
+command line (bash):
+
+python3 script.py
+
+result:
+
+    from websockets.asyncio.server import serve
+ModuleNotFoundError: No module named 'websockets.asyncio'
+

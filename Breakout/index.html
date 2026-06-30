@@ -1,0 +1,132 @@
+<style>
+.default {
+  width: 750px;                 /* Must have a constrained or fixed width */
+  overflow-wrap: break-word;    /* Breaks long words only if they overflow */
+	padding: 10px 20px;
+	background-color: #EEEEEE;
+	text-align: left;
+}
+.center-text {
+  text-align: center;
+}
+	.link {
+  text-align: left;
+		background-color: #BCC6CC ;
+		padding: 2px 3px 4px 3px; 
+}
+</style>
+
+
+<div class="default">
+	<br><p class="center-text" style="text-align: center;"><b>Idea: Use a tablet, or phone, to control Python​.</b></p>
+<br>In this scenario Python becomes both the client and server.
+<br>
+	<br><b>Test case:</b> A Breakout​ game using the pyGame​ library.
+<br>
+<br>The game used was a group project at UMGC​.
+<br>The group consisted of: Christopher Baquet​, Andre Dothlyn​, Tori Haynes​, Rick Lyman​ and Derrick Perry​ .
+<br>
+<br>This particular implementation will use web sockets via a web browser. 
+<br>It's germination was the investigation of running the game using WASM​.
+<br>
+<br>Running Python using WASM is doable​; however, pyGame complicates things.
+<br>Using Pygbag​ is a solution for doing this. To run across the internet, this approach will eventually be investigated.
+<br>
+<br>For now, this author is interested in running on a local machine; so, working with Pygbag is deferred.
+<br>Currently the local machine is running a full OS (Mac, Windows, or Linux).
+<br>
+<br>The author would like to move from an OS to bare metal​. However, that day, is not today.
+<br>
+<br>The tablet, or phone, will use a web browser to record touch events​.
+<br>
+	<br><i>Here is a base case: ​</i>
+<br>[https://github.com/natevw/touch-test/blob/gh-pages/index.html]
+<br>
+<br><i>An unmodified version:</i>
+<br><a class="link" href="Touch.html" target="_blank" title="TouchBrowserBaseline">Touch Browser Baseline</a>
+<br>
+<br>Now we need something to receive the events.
+<br>Because our Breakout game is written in Python, we will use Python on the server.
+<br>
+<br><i>For this, asyncio is chosen:</i>
+<br>[https://www.google.com/search?q=asyncio&oq=asyncio]
+<br>
+<br><i>Sample Google response:</i>
+<br><a class="link" href="asyncioBaseline.pdf" target="_blank" title="AsyncioBaselinePDF">asyncio Server Baseline</a>
+<br>
+<br><i>Now we install asyncio:</i>
+<br><a class="link" href="aiohttpInstall.html" target="_blank" title="AsyncioInstall">asyncio Install</a>
+<br>
+<br>Note: I am using pixi to install.
+<br>[https://www.google.com/search?q=python+package+manager+pixi&oq=Python+pixi]
+<br>
+	<br><i>Now let's create a baseline server (using our original Google search):</i>
+<br><a class="link" href="serverA.html" target="_blank" title="serverA">asyncio Python Server Version A</a>
+<br>
+<br><i>Test our server baseline:</i>
+<br><a class="link" href="aiohttpFirstRun.html" target="_blank" title="RunServerA">Server, Version A, Test Run</a>
+<br>
+<br>At this point, entering your server machine's ip address and port 8080, in your browser's address bar 
+	<br>(eg: http://192.168.12.121:8080/) should return: "Hello, Anonymous"
+<br>
+	<br><i>Because we want to use web sockets, we need to add it to our Python environment:</i>
+<br><a class="link" href="AddWebSockets-asyncio.html" target="_blank" title="AddWebSockets-asyncio">Add Web Sockets</a>
+<br>
+<br><i>Because we want to use Browser Touch Events, we need to add web functionality to asyncio:</i>
+<br><a class="link" href="serverB.html" target="_blank" title="serverB">Add Web Functionality to asyncio</a>
+<br>
+<br><i>Now we test our new server baseline:</i>
+<br><a class="link" href="aiohttpRunB.html" target="_blank" title="RunServerB">Server, Version B, Test Run</a>
+<br>
+<br>Again, entering your server machine's ip address and port 8080, in your browser's address bar 
+	<br>(eg: http://192.168.12.121:8080/) should return: "Hello, Anonymous"
+<br>
+<br>Now let's return our attention to the client.
+<br><i>Here is the source for our first test Client:</i>
+<br><a class="link" href="client0source0.html" target="_blank" title="client0source">Client (Browser) HTML Source</a>
+<br><i>Here is a screenshot from our first test Client:</i>
+<br><a class="link" href="client0screenshot.html" target="_blank" title="client0screenshot">Client (Browser) HTML Screenshot</a>
+<br>When you run the Server and Client you should see "Connected to server!".
+<br>
+<br>Now we have a client that connects to the server via a web socket.
+<br>
+	<br>Next, we want to stream the touch events to the server. For this we create a new Client.
+<br><i>This is the source for out next Client:</i>
+<br><a class="link" href="clientAsource.html" target="_blank" title="clientAsource">Next Client (Browser) HTML Source</a>
+<br><i>Here is a screenshot from our new test Client:</i>
+<br><a class="link" href="ScreenshotClientA.html" target="_blank" title="clientAscreenshot">Next Client (Browser) Screenshot</a>
+<br><i>Here is a screenshot from our Server:</i>
+<br><a class="link" href="ScreenshotServer.html" target="_blank" title="ServerScreenshot">Server Screenshot</a>
+<br>
+<br>Now we are going to merge our server with our breakout game.
+<br><i>This is our merged source:</i>
+<br><a class="link" href="BreakoutServer.html" target="_blank" title="GameServer">Breakout Server Source</a>
+<br>
+<br>Now we test our new Breakout server baseline.
+<br><i>Run the server:</i>
+<br><a class="link" href="ScreenshotBreakoutServer.html" target="_blank" title="ScreenshotBreakoutServer">Breakout Server Screenshot</a>
+<br><i>Breakout game, running:</i>
+<br><a class="link" href="ScreenshotBreakoutGame.html" target="_blank" title="ScreenshotBreakoutGame">Breakout Game Screenshot</a>
+<br>
+<br>Again, entering your server machine's ip address and port 8080, in your phone (or tablet) browser's address bar (eg: <br>http://192.168.12.121:8080/) you should now be able to control the Breakout game using touch. 
+<br>
+<br><i>Game Runtime Example (Desktop):</i>
+<br><a class="link" href="GameRunning.html" target="_blank" title="GameRunning.html">Game Running *Controlled from Browser</a>
+<br><i>Game Runtime Example (Touch Client):</i>
+<br><a class="link" href="TouchClientScreenshot.html" target="_blank" title="TouchClientScreenshot">Touch Client Screenshot (eg Phone)</a>
+<br>
+<br><i>Possible errors, which may be encountered:</i>
+<br>
+<br><a class="link" href="InstallError22.html" target="_blank" title="Install22"> install error new 22</a>
+<br>
+<br><a class="link" href="RuntimeError11.html" target="_blank" title="Runtime22"> runtime error new 11</a>
+<br>
+	<br><b>References:</b>
+<br>
+<br>https://pygame-web.github.io/wiki/pygbag/
+<br>https://pygame-web.github.io/
+<br>https://github.com/pygame-web
+<br>
+<br>
+<br>https://github.com/torih119/cmsc-group-project-one [private]
+</div>

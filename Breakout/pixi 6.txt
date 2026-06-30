@@ -1,0 +1,29 @@
+rlyman@8470p:~/breakout_2$ pixi add --pypi websockets
+Error:   × could not find pixi.toml or pyproject.toml with tool.pixi at directory /home/rlyman/breakout_2
+
+rlyman@8470p:~/breakout_2$ pixi init
+✔ Created /home/rlyman/breakout_2/pixi.toml
+rlyman@8470p:~/breakout_2$ pixi add --pypi websockets
+Error:   × failed to solve the pypi requirements of environment 'default' for platform 'linux-64'
+  ╰─▶ No Python interpreter found in the dependencies
+  help: Try: pixi add python
+
+rlyman@8470p:~/breakout_2$ pixi init --format pyproject
+✔ Created /home/rlyman/breakout_2/pyproject.toml
+rlyman@8470p:~/breakout_2$ pixi add --pypi websockets
+Error:   × failed to solve the pypi requirements of environment 'default' for platform 'linux-64'
+  ╰─▶ No Python interpreter found in the dependencies
+  help: Try: pixi add python
+
+rlyman@8470p:~/breakout_2$ python --version
+Command 'python' not found, did you mean:
+  command 'python3' from deb python3
+  command 'python' from deb python-is-python3
+rlyman@8470p:~/breakout_2$ python3 --version
+Python 3.12.3
+rlyman@8470p:~/breakout_2$ pixi add "python>=3.12.3"
+✔ Added python>=3.12.3
+rlyman@8470p:~/breakout_2$ pixi add --pypi websockets
+✔ Added websockets >=16.0, <17
+Added these as pypi-dependencies.
+rlyman@8470p:~/breakout_2$ 

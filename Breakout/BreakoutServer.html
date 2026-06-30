@@ -1,0 +1,367 @@
+<pre>
+import asyncio
+import json
+import os
+import sys
+from dataclasses import dataclass
+from typing import List
+import pygame
+from aiohttp import web
+
+# ============================================================
+# GAME SETTINGS / CONSTANTS
+# ============================================================
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+FPS = 60
+
+WHITE = (255, 255, 255)
+BLACK = (18, 18, 18)
+LIGHT_BLUE = (80, 160, 255)
+RED = (220, 70, 70)
+GREEN = (70, 190, 120)
+YELLOW = (245, 210, 80)
+PURPLE = (160, 100, 220)
+GRAY = (180, 180, 180)
+
+PADDLE_WIDTH = 120
+PADDLE_HEIGHT = 15
+
+BALL_SIZE = 14
+BALL_START_SPEED_X = 4
+BALL_START_SPEED_Y = -4
+
+BRICK_ROWS = 5
+BRICK_COLUMNS = 10
+BRICK_WIDTH = 70
+BRICK_HEIGHT = 25
+BRICK_PADDING = 8
+BRICK_TOP_OFFSET = 80
+BRICK_LEFT_OFFSET = 35
+
+STARTING_LIVES = 3
+
+# Global reference to allow the WebSocket to influence the game state
+game_instance = None
+
+# ============================================================
+# GAME CLASSES (PADDLE, BALL, BRICK)
+# ============================================================
+@dataclass
+class Paddle:
+    x: int
+    y: int
+    width: int = PADDLE_WIDTH
+    height: int = PADDLE_HEIGHT
+
+    @property
+    def rect(self) -> pygame.Rect:
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def moveToX(self, target_x: int) -> None:
+        """Directly positions the paddle center using touch X coordinates."""
+        # Center the paddle on the touch point
+        self.x = target_x - (self.width // 2)
+        
+        # Keep paddle within screen boundaries
+        if self.x < 0:
+            self.x = 0
+        elif self.x + self.width > SCREEN_WIDTH:
+            self.x = SCREEN_WIDTH - self.width
+
+    def draw(self, screen: pygame.Surface) -> None:
+        pygame.draw.rect(screen, LIGHT_BLUE, self.rect, border_radius=8)
+
+
+@dataclass
+class Ball:
+    x: float
+    y: float
+    speed_x: float = BALL_START_SPEED_X
+    speed_y: float = BALL_START_SPEED_Y
+    size: int = BALL_SIZE
+
+    @property
+    def rect(self) -> pygame.Rect:
+        return pygame.Rect(int(self.x), int(self.y), self.size, self.size)
+
+    def reset(self, level: int) -> None:
+        self.x = SCREEN_WIDTH // 2 - self.size // 2
+        self.y = SCREEN_HEIGHT // 2
+        speed_multiplier = 1 + ((level - 1) * 0.10)
+        self.speed_x = BALL_START_SPEED_X * speed_multiplier
+        self.speed_y = BALL_START_SPEED_Y * speed_multiplier
+
+    def move(self) -> None:
+        self.x += self.speed_x
+        self.y += self.speed_y
+
+    def bounce_x(self) -> None:
+        self.speed_x *= -1
+
+    def bounce_y(self) -> None:
+        self.speed_y *= -1
+
+    def draw(self, screen: pygame.Surface) -> None:
+        pygame.draw.ellipse(screen, WHITE, self.rect)
+
+
+@dataclass
+class Brick:
+    x: int
+    y: int
+    width: int
+    height: int
+    color: tuple
+    points: int = 10
+    active: bool = True
+
+    @property
+    def rect(self) -> pygame.Rect:
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, screen: pygame.Surface) -> None:
+        if self.active:
+            pygame.draw.rect(screen, self.color, self.rect, border_radius=5)
+            pygame.draw.rect(screen, WHITE, self.rect, 2, border_radius=5)
+
+
+# ============================================================
+# MAIN GAME LOGIC
+# ============================================================
+class Game:
+    def __init__(self) -> None:
+        pygame.init()
+        pygame.display.set_caption("Breakout Game - Server Edition")
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.clock = pygame.time.Clock()
+
+        self.title_font = pygame.font.SysFont("arial", 42, bold=True)
+        self.medium_font = pygame.font.SysFont("arial", 28, bold=True)
+        self.small_font = pygame.font.SysFont("arial", 22)
+
+        self.paddle = Paddle(x=SCREEN_WIDTH // 2 - PADDLE_WIDTH // 2, y=SCREEN_HEIGHT - 50)
+        self.ball = Ball(x=SCREEN_WIDTH // 2 - BALL_SIZE // 2, y=SCREEN_HEIGHT // 2)
+
+        self.score = 0
+        self.lives = STARTING_LIVES
+        self.level = 1
+        self.game_state = "START"
+        self.bricks: List[Brick] = []
+        self.create_bricks()
+
+    def create_bricks(self) -> None:
+        self.bricks.clear()
+        colors = [RED, YELLOW, GREEN, LIGHT_BLUE, PURPLE]
+        for row in range(BRICK_ROWS):
+            for col in range(BRICK_COLUMNS):
+                x = BRICK_LEFT_OFFSET + col * (BRICK_WIDTH + BRICK_PADDING)
+                y = BRICK_TOP_OFFSET + row * (BRICK_HEIGHT + BRICK_PADDING)
+                brick = Brick(x=x, y=y, width=BRICK_WIDTH, height=BRICK_HEIGHT, color=colors[row % len(colors)])
+                self.bricks.append(brick)
+
+    def reset_round(self) -> None:
+        self.paddle.x = SCREEN_WIDTH // 2 - PADDLE_WIDTH // 2
+        self.ball.reset(self.level)
+
+    def reset_game(self) -> None:
+        self.score = 0
+        self.lives = STARTING_LIVES
+        self.level = 1
+        self.game_state = "PLAYING"
+        self.create_bricks()
+        self.reset_round()
+
+    def handle_touch_input(self, event_type: str, client_x: int) -> None:
+        """Processes interaction messages coming from the mobile device."""
+        # Convert coordinates if your client area width differs from game screen width
+        # Assuming direct pixel mapping or relative scaling
+        if self.game_state == "PLAYING":
+            if "move" in event_type or "start" in event_type or "down" in event_type:
+                self.paddle.moveToX(client_x)
+        
+        elif self.game_state == "START":
+            if event_type in ["touchstart", "mousedown"]:
+                self.reset_game()
+                
+        elif self.game_state in ["GAME_OVER", "WIN"]:
+            if event_type in ["touchstart", "mousedown"]:
+                self.reset_game()
+
+    def handle_events(self) -> None:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.quit_game()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.quit_game()
+
+    def handle_wall_collisions(self) -> None:
+        ball_rect = self.ball.rect
+        if ball_rect.left <= 0:
+            self.ball.x = 0
+            self.ball.bounce_x()
+        if ball_rect.right >= SCREEN_WIDTH:
+            self.ball.x = SCREEN_WIDTH - self.ball.size
+            self.ball.bounce_x()
+        if ball_rect.top <= 0:
+            self.ball.y = 0
+            self.ball.bounce_y()
+        if ball_rect.top > SCREEN_HEIGHT:
+            self.lives -= 1
+            if self.lives <= 0:
+                self.game_state = "GAME_OVER"
+            else:
+                self.reset_round()
+
+    def handle_paddle_collision(self) -> None:
+        if self.ball.rect.colliderect(self.paddle.rect) and self.ball.speed_y > 0:
+            self.ball.y = self.paddle.y - self.ball.size
+            self.ball.bounce_y()
+            paddle_center = self.paddle.x + self.paddle.width / 2
+            ball_center = self.ball.x + self.ball.size / 2
+            distance_from_center = ball_center - paddle_center
+            self.ball.speed_x = distance_from_center / 15
+            if -1 < self.ball.speed_x < 1:
+                self.ball.speed_x = 1 if self.ball.speed_x >= 0 else -1
+
+    def handle_brick_collisions(self) -> None:
+        for brick in self.bricks:
+            if brick.active and self.ball.rect.colliderect(brick.rect):
+                brick.active = False
+                self.score += brick.points
+                self.ball.bounce_y()
+                break
+
+        if all(not brick.active for brick in self.bricks):
+            if self.level >= 3:
+                self.game_state = "WIN"
+            else:
+                self.level += 1
+                self.create_bricks()
+                self.reset_round()
+
+    def update(self) -> None:
+        if self.game_state == "PLAYING":
+            self.ball.move()
+            self.handle_wall_collisions()
+            self.handle_paddle_collision()
+            self.handle_brick_collisions()
+
+    def draw_text_centered(self, text: str, font: pygame.font.Font, color: tuple, y: int) -> None:
+        text_surface = font.render(text, True, color)
+        text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, y))
+        self.screen.blit(text_surface, text_rect)
+
+    def draw_hud(self) -> None:
+        score_text = self.small_font.render(f"Score: {self.score}", True, WHITE)
+        lives_text = self.small_font.render(f"Lives: {self.lives}", True, WHITE)
+        level_text = self.small_font.render(f"Level: {self.level}", True, WHITE)
+        self.screen.blit(score_text, (20, 20))
+        self.screen.blit(lives_text, (SCREEN_WIDTH // 2 - 45, 20))
+        self.screen.blit(level_text, (SCREEN_WIDTH - 110, 20))
+
+    def draw_start_screen(self) -> None:
+        self.draw_text_centered("BREAKOUT", self.title_font, LIGHT_BLUE, 190)
+        self.draw_text_centered("Server + Touch Edition", self.medium_font, WHITE, 240)
+        self.draw_text_centered("Tap/Click device screen to Start", self.small_font, WHITE, 310)
+        self.draw_text_centered("Drag on your mobile screen to track paddle", self.small_font, GRAY, 350)
+        self.draw_text_centered("Press ESC on desktop to quit", self.small_font, GRAY, 385)
+
+    def draw_game_over_screen(self) -> None:
+        self.draw_text_centered("GAME OVER", self.title_font, RED, 230)
+        self.draw_text_centered(f"Final Score: {self.score}", self.medium_font, WHITE, 290)
+        self.draw_text_centered("Tap device screen to Restart", self.small_font, GRAY, 350)
+
+    def draw_win_screen(self) -> None:
+        self.draw_text_centered("YOU WIN!", self.title_font, GREEN, 230)
+        self.draw_text_centered(f"Final Score: {self.score}", self.medium_font, WHITE, 290)
+        self.draw_text_centered("Tap device screen to Play Again", self.small_font, GRAY, 350)
+
+    def draw(self) -> None:
+        self.screen.fill(BLACK)
+        if self.game_state == "START":
+            self.draw_start_screen()
+        elif self.game_state == "PLAYING":
+            self.draw_hud()
+            self.paddle.draw(self.screen)
+            self.ball.draw(self.screen)
+            for brick in self.bricks:
+                brick.draw(self.screen)
+        elif self.game_state == "GAME_OVER":
+            self.draw_game_over_screen()
+        elif self.game_state == "WIN":
+            self.draw_win_screen()
+        pygame.display.flip()
+
+    def quit_game(self) -> None:
+        pygame.quit()
+        sys.exit()
+
+
+# ============================================================
+# ASYNC SERVER & GAME LOOP INTEGRATION
+# ============================================================
+async def handle_index(request):
+    """Serves your clientA.html template."""
+    if os.path.exists('clientA.html'):
+        return web.FileResponse('clientA.html')
+    else:
+        return web.Response(text="Error: clientA.html not found.", status=404)
+
+async def websocket_handler(request):
+    """Streams mobile touch configurations straight into the Pygame logic."""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    print("⚡ Mobile Controller Linked via WebSocket!")
+
+    async for msg in ws:
+        if msg.type == web.WSMsgType.TEXT:
+            try:
+                data = json.loads(msg.data)
+                event_type = data.get('event')
+                x_coord = data.get('x', 0)
+                
+                # Pass the touch coordinate into the active game loop
+                if game_instance is not None:
+                    game_instance.handle_touch_input(event_type, int(x_coord))
+                    
+            except (json.JSONDecodeError, ValueError):
+                pass
+    return ws
+
+async def main_game_loop(game):
+    """Asynchronous wrapper running alongside the HTTP/WS server."""
+    while True:
+        game.handle_events()
+        game.update()
+        game.draw()
+        
+        # yield control to let aiohttp process network requests 
+        # 1/60th of a second delay matches our target 60 FPS
+        await asyncio.sleep(1 / FPS)
+
+async def start_async_app():
+    global game_instance
+    game_instance = Game()
+
+    app = web.Application()
+    app.add_routes([
+        web.get('/', handle_index),
+        web.get('/ws', websocket_handler),
+    ])
+    
+    # Configure runner to execute asynchronously without blocking 
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    await site.start()
+    print("🚀 Server active on http://localhost:8080 (or your local network IP)")
+
+    # Execute the game loop alongside network handlers concurrently
+    await main_game_loop(game_instance)
+
+if __name__ == '__main__':
+    # Initialize the unified async runner environment
+    asyncio.run(start_async_app())
+</pre>

@@ -1,0 +1,112 @@
+rlyman@8470p:~$ python3 --version
+Python 3.12.3
+rlyman@8470p:~$ pipx --version
+1.4.3
+rlyman@8470p:~$ python3 -m venv .venv
+rlyman@8470p:~$ pip install pygame
+error: externally-managed-environment
+
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install
+    python3-xyz, where xyz is the package you are trying to
+    install.
+    
+    If you wish to install a non-Debian-packaged Python package,
+    create a virtual environment using python3 -m venv path/to/venv.
+    Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+    sure you have python3-full installed.
+    
+    If you wish to install a non-Debian packaged Python application,
+    it may be easiest to use pipx install xyz, which will manage a
+    virtual environment for you. Make sure you have pipx installed.
+    
+    See /usr/share/doc/python3.12/README.venv for more information.
+
+note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+hint: See PEP 668 for the detailed specification.
+rlyman@8470p:~$ cd venv
+bash: cd: venv: No such file or directory
+rlyman@8470p:~$ sudo apt install python3-pygame
+[sudo] password for rlyman: 
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libfluidsynth3 libinstpatch-1.0-2 libmodplug1 libsdl2-2.0-0
+  libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 timgm6mb-soundfont
+Suggested packages:
+  python-pygame-doc timidity fluid-soundfont-gm
+The following NEW packages will be installed:
+  libfluidsynth3 libinstpatch-1.0-2 libmodplug1 libsdl2-2.0-0
+  libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 python3-pygame
+  timgm6mb-soundfont
+0 upgraded, 9 newly installed, 0 to remove and 5 not upgraded.
+Need to get 8,125 kB of archives.
+After this operation, 15.0 MB of additional disk space will be used.
+Do you want to continue? [Y/n] Y
+Get:1 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 libinstpatch-1.0-2 amd64 1.1.6-1build2 [251 kB]
+Get:2 http://us.archive.ubuntu.com/ubuntu noble-updates/main amd64 libsdl2-2.0-0 amd64 2.30.0+dfsg-1ubuntu3.1 [686 kB]
+Get:3 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 timgm6mb-soundfont all 1.3-5 [5,427 kB]
+Get:4 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 libfluidsynth3 amd64 2.3.4-1build3 [249 kB]
+Get:5 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 libmodplug1 amd64 1:0.8.9.0-3build1 [166 kB]
+Get:6 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 libsdl2-image-2.0-0 amd64 2.8.2+dfsg-1build2 [65.1 kB]
+Get:7 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 libsdl2-mixer-2.0-0 amd64 2.8.0+dfsg-1build3 [81.8 kB]
+Get:8 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 libsdl2-ttf-2.0-0 amd64 2.22.0+dfsg-1 [35.7 kB]
+Get:9 http://us.archive.ubuntu.com/ubuntu noble/universe amd64 python3-pygame amd64 2.5.2-2 [1,165 kB]
+Fetched 8,125 kB in 1s (7,466 kB/s)       
+Selecting previously unselected package libinstpatch-1.0-2:amd64.
+(Reading database ... 324688 files and directories currently installed.)
+Preparing to unpack .../0-libinstpatch-1.0-2_1.1.6-1build2_amd64.deb ...
+Unpacking libinstpatch-1.0-2:amd64 (1.1.6-1build2) ...
+Selecting previously unselected package libsdl2-2.0-0:amd64.
+Preparing to unpack .../1-libsdl2-2.0-0_2.30.0+dfsg-1ubuntu3.1_amd64.deb ...
+Unpacking libsdl2-2.0-0:amd64 (2.30.0+dfsg-1ubuntu3.1) ...
+Selecting previously unselected package timgm6mb-soundfont.
+Preparing to unpack .../2-timgm6mb-soundfont_1.3-5_all.deb ...
+Unpacking timgm6mb-soundfont (1.3-5) ...
+Selecting previously unselected package libfluidsynth3:amd64.
+Preparing to unpack .../3-libfluidsynth3_2.3.4-1build3_amd64.deb ...
+Unpacking libfluidsynth3:amd64 (2.3.4-1build3) ...
+Selecting previously unselected package libmodplug1:amd64.
+Preparing to unpack .../4-libmodplug1_1%3a0.8.9.0-3build1_amd64.deb ...
+Unpacking libmodplug1:amd64 (1:0.8.9.0-3build1) ...
+Selecting previously unselected package libsdl2-image-2.0-0:amd64.
+Preparing to unpack .../5-libsdl2-image-2.0-0_2.8.2+dfsg-1build2_amd64.deb ...
+Unpacking libsdl2-image-2.0-0:amd64 (2.8.2+dfsg-1build2) ...
+Selecting previously unselected package libsdl2-mixer-2.0-0:amd64.
+Preparing to unpack .../6-libsdl2-mixer-2.0-0_2.8.0+dfsg-1build3_amd64.deb ...
+Unpacking libsdl2-mixer-2.0-0:amd64 (2.8.0+dfsg-1build3) ...
+Selecting previously unselected package libsdl2-ttf-2.0-0:amd64.
+Preparing to unpack .../7-libsdl2-ttf-2.0-0_2.22.0+dfsg-1_amd64.deb ...
+Unpacking libsdl2-ttf-2.0-0:amd64 (2.22.0+dfsg-1) ...
+Selecting previously unselected package python3-pygame.
+Preparing to unpack .../8-python3-pygame_2.5.2-2_amd64.deb ...
+Unpacking python3-pygame (2.5.2-2) ...
+Setting up libmodplug1:amd64 (1:0.8.9.0-3build1) ...
+Setting up libsdl2-2.0-0:amd64 (2.30.0+dfsg-1ubuntu3.1) ...
+Setting up timgm6mb-soundfont (1.3-5) ...
+update-alternatives: using /usr/share/sounds/sf2/TimGM6mb.sf2 to provide /usr/sh
+are/sounds/sf2/default-GM.sf2 (default-GM.sf2) in auto mode
+update-alternatives: using /usr/share/sounds/sf2/TimGM6mb.sf2 to provide /usr/sh
+are/sounds/sf3/default-GM.sf3 (default-GM.sf3) in auto mode
+Setting up libinstpatch-1.0-2:amd64 (1.1.6-1build2) ...
+Setting up libfluidsynth3:amd64 (2.3.4-1build3) ...
+Setting up libsdl2-image-2.0-0:amd64 (2.8.2+dfsg-1build2) ...
+Setting up libsdl2-mixer-2.0-0:amd64 (2.8.0+dfsg-1build3) ...
+Setting up libsdl2-ttf-2.0-0:amd64 (2.22.0+dfsg-1) ...
+Setting up python3-pygame (2.5.2-2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+rlyman@8470p:~$ mkdir breakout
+rlyman@8470p:~$ cd breakout
+rlyman@8470p:~/breakout$ python3 breakout.py
+pygame 2.5.2 (SDL 2.30.0, Python 3.12.3)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+rlyman@8470p:~/breakout$ python -m pygame.examples.aliens
+Command 'python' not found, did you mean:
+  command 'python3' from deb python3
+  command 'python' from deb python-is-python3
+rlyman@8470p:~/breakout$ python3 -m pygame.examples.aliens
+pygame 2.5.2 (SDL 2.30.0, Python 3.12.3)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+/usr/bin/python3: Error while finding module specification for 'pygame.examples.aliens' (ModuleNotFoundError: No module named 'pygame.examples')
+rlyman@8470p:~/breakout$ 

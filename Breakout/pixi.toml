@@ -1,0 +1,19 @@
+[workspace]
+authors = ["ricklyman <lyman.rick@gmail.com>"]
+channels = ["conda-forge"]
+name = "breakout_2"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.12.3"
+websockets = ">=16.0,<17"
+starlette = ">=1.2.1,<2"
+uvicorn = ">=0.49.0,<0.50"
+aiohttp = ">=3.13.5,<4"
+pygame = ">=2.6.1,<3"
+
+[pypi-dependencies]
+websockets = ">=16.0, <17"

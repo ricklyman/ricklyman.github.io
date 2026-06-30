@@ -1,0 +1,20 @@
+<html>
+<pre>
+from aiohttp import web
+
+# Define an async request handler
+async def handle(request):
+    name = request.match_info.get('name', "Anonymous")
+    text = f"Hello, {name}"
+    return web.Response(text=text)
+
+# Create the application and add routes
+app = web.Application()
+app.add_routes([web.get('/', handle),
+                web.get('/{name}', handle)])
+
+# Run the server
+if __name__ == '__main__':
+    web.run_app(app)
+</pre>
+</html>

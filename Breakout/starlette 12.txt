@@ -1,0 +1,27 @@
+<pre><font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ pip install starlette
+<font color="#C01C28"><b>error</b></font>: <b>externally-managed-environment</b>
+
+<font color="#C01C28">×</font> This environment is externally managed
+<font color="#C01C28">╰─&gt;</font> To install Python packages system-wide, try apt install
+<font color="#C01C28">   </font> python3-xyz, where xyz is the package you are trying to
+<font color="#C01C28">   </font> install.
+<font color="#C01C28">   </font> 
+<font color="#C01C28">   </font> If you wish to install a non-Debian-packaged Python package,
+<font color="#C01C28">   </font> create a virtual environment using python3 -m venv path/to/venv.
+<font color="#C01C28">   </font> Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+<font color="#C01C28">   </font> sure you have python3-full installed.
+<font color="#C01C28">   </font> 
+<font color="#C01C28">   </font> If you wish to install a non-Debian packaged Python application,
+<font color="#C01C28">   </font> it may be easiest to use pipx install xyz, which will manage a
+<font color="#C01C28">   </font> virtual environment for you. Make sure you have pipx installed.
+<font color="#C01C28">   </font> 
+<font color="#C01C28">   </font> See /usr/share/doc/python3.12/README.venv for more information.
+
+<font color="#A347BA"><b>note</b></font>: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+<font color="#2AA1B3"><b>hint</b></font>: See PEP 668 for the detailed specification.
+<font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ pixi add starlette
+<font color="#26A269">✔ </font>Added <b>starlette</b> &gt;=1.2.1,&lt;2
+<font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ pixi add uvicorn
+<font color="#26A269">✔ </font>Added <b>uvicorn</b> &gt;=0.49.0,&lt;0.50
+<font color="#26A269"><b>rlyman@8470p</b></font>:<font color="#12488B"><b>~/breakout_2</b></font>$ 
+</pre>
