@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>General Interface FS Test</title>
+    
+    <script type="text/javascript">
+        // Global error capturing
+        window.onerror = function(message, source, lineno, colno, error) {
+            const con = document.getElementById("console");
+            if (con) {
+                const span = document.createElement("span");
+                span.style.color = "#ff4d6d";
+                span.textContent = "\n[ERROR] " + message + "\n  Source: " + source + "\n  Line: " + lineno + " Column: " + colno + "\n";
+                con.appendChild(span);
+            }
+            return false;
+        };
+    </script>
+
+    <!-- Load JSX30.js to bootstrap the GI framework -->
+    <script type="text/javascript" src="JSX/js/JSX30.js" jsxapppath="GI_Builder"></script>
+</head>
+<body style="font-family: monospace; padding: 20px; background-color: #1e1e24; color: #e3e6ed;">
+    <h2>General Interface OPFS & localstorage Test Console</h2>
+    <div id="status">Waiting for General Interface Core to load...</div>
+    <pre id="console" style="background-color: #111218; padding: 15px; border-radius: 5px; border: 1px solid #272c3d; max-height: 500px; overflow: auto;"></pre>
+
+    <script type="text/javascript">
+        function log(msg, color = "#e3e6ed") {
+            const con = document.getElementById("console");
+            const span = document.createElement("span");
+            span.style.color = color;
+            span.textContent = msg + "\n";
+            con.appendChild(span);
+            con.scrollTop = con.scrollHeight;
+        }
+
+        // Poll for GI Core to finish loading
+        var pollInterval = setInterval(function() {
+            if (window.jsx3 && window.jsx3.Class) {
+                clearInterval(pollInterval);
+                document.getElementById("status").textContent = "GI Core loaded. Bootstrapping test classes...";
+                bootstrapAndLoadDriver();
+            }
+        }, 50);
+
+        function bootstrapAndLoadDriver() {
+            try {
+                log("Defining base classes...");
+                
+                window.jsx3.io = window.jsx3.io || {};
+                window.jsx3.ide = {
+                    LOG: {
+                        error: function(m, e) { console.error(m, e); },
+                        warn: function(m, e) { console.warn(m, e); },
+                        debug: function(m) { console.log(m); },
+                        info: function(m) { console.log(m); }
+                    }
+                };
+
+                // Define base FileSystem class
+                jsx3.Class.defineClass("jsx3.io.FileSystem", null, null, function(a, j) {
+                    var ub = {a: "strPath"};
+                    j.getFile = jsx3.Method.newAbstract(ub.a);
+                    j.getUserDocuments = jsx3.Method.newAbstract();
+                    j.getRoots = jsx3.Method.newAbstract();
+                    j.createTempFile = jsx3.Method.newAbstract();
+                    j.hasRead = function() { return this._desc.hasRead(); };
+                    j.hasWrite = function() { return this._desc.hasWrite(); };
+                    j.hasList = function() { return this._desc.hasList(); };
+                });
+
+                // Define base File class
+                jsx3.Class.defineClass("jsx3.io.File", null, null, function(j, m) {
+                    var ub = {a: "\r\n", b: "\r", c: "\n", d: "Not implemented", e: "/", f: "", g: "..", h: ".", i: "May not resolve an absolute path: "};
+                    j.FIND_INCLUDE = 1;
+                    j.FIND_RECURSE = 2;
+                    j.LINE_SEP = {dos: ub.a, mac: ub.b, unix: ub.c};
+                    
+                    m.init = function(s, d) {
+                        this._fs = s;
+                        this._uri = jsx3.net.URI.valueOf(d);
+                    };
+                    
+                    m.getFileSystem = function() { return this._fs; };
+                    m.write = function(h, i) { throw new jsx3.Exception(ub.d); };
+                    m.read = function() { throw new jsx3.Exception(ub.d); };
+                    m.isDirectory = function() { return false; };
+                    m.isFile = function() { return false; };
+                    
+                    m.getParentFile = function() {
+                        var Ka = this.toURI();
+                        var bb = Ka.getPath();
+                        if (bb == ub.e || bb == ub.f) return null;
+                        if (this.isDirectory() && (jsx3.$S(bb)).endsWith(ub.e)) {
+                            Ka = Ka.resolve(ub.g);
+                        } else Ka = Ka.resolve(ub.h);
+                        var pa = this._fs.getFile(Ka);
+                        return this.equals(pa) ? null : pa;
+                    };
+                    
+                    m.resolve = function(c) {
+                        c = jsx3.net.URI.valueOf(c);
+                        if (c.isAbsolute()) throw new jsx3.Exception(ub.i + c);
+                        return this._fs.getFile((this.toURI()).resolve(c));
+                    };
+                    
+                    m.getParentPath = function() {
+                        var kb = this.getParentFile();
+                        return kb != null ? kb.getAbsolutePath() : null;
+                    };
+                    
+                    m.listFiles = function() { return jsx3.$A(); };
+                    m.mkdir = function() { throw new jsx3.Exception(ub.d); };
+                    
+                    m.mkdirs = function() {
+                        var x = this.getParentFile();
+                        if (x) x.mkdirs();
+                        if (!this.isDirectory()) this.mkdir();
+                    };
+                    
+                    m.deleteFile = function() { throw new jsx3.Exception(ub.d); };
+                    m.getAbsolutePath = function() { return (this.toURI()).getPath(); };
+                    
+                    m.getName = function() {
+                        var t = (this.toURI()).getPath();
+                        var qb = t.lastIndexOf(ub.e);
+                        if (qb == t.length - 1) {
+                            qb = t.lastIndexOf(ub.e, qb - 1);
+                            return t.substring(qb >= 0 ? qb + 1 : 0, t.length - 1);
+                        } else return qb >= 0 ? t.substring(qb + 1) : t;
+                    };
+                    
+                    m.getExtension = function() {
+                        var Na = this.getName();
+                        if (Na) {
+                            var Z = Na.lastIndexOf(ub.h);
+                            if (Z >= 0) return Na.substring(Z + 1);
+                        }
+                        return ub.f;
+                    };
+                    
+                    m.exists = function() { return this.isFile() || this.isDirectory(); };
+                    m.renameTo = function(r) { throw new jsx3.Exception(ub.d); };
+                    
+                    m.copyTo = function(i) {
+                        if (this.isFile()) {
+                            i.write(this.read());
+                        } else if (this.isDirectory()) {
+                            i.mkdir();
+                            (this.listFiles()).each(function(c) {
+                                c.copyTo(i.resolve(c.getName()));
+                            });
+                        }
+                    };
+                    
+                    m.isHidden = function() { return false; };
+                    m.isReadOnly = function() { return false; };
+                    m.setReadOnly = function(h) { throw new jsx3.Exception(ub.d); };
+                    m.isRoot = function() { return this.getParentFile() == null; };
+                    m.getType = function() { return this.getExtension(); };
+                    m.getStat = function() { return {mtime: null, size: null}; };
+                    
+                    m.equals = function(d) {
+                        if (d && d.toURI) {
+                            var K = this.toURI();
+                            var Sa = d.toURI();
+                            if (K.getScheme() == Sa.getScheme() && K.getPath() == Sa.getPath() && K.getQuery() == Sa.getQuery()) {
+                                var C = K.getAuthority() || ub.f;
+                                var R = Sa.getAuthority() || ub.f;
+                                return C == R;
+                            }
+                        }
+                        return false;
+                    };
+                    
+                    m.isDescendantOf = function(e) {
+                        var J = e.toURI();
+                        var A = this.toURI();
+                        if (J.getScheme() != A.getScheme()) return false;
+                        if ((J.getAuthority() || ub.f) != (A.getAuthority() || ub.f)) return false;
+                        var Ma = J.getPath();
+                        var t = A.getPath();
+                        return t.length > Ma.length && t.indexOf(Ma) == 0 && (t.charAt(Ma.length) == ub.e || t.charAt(Ma.length - 1) == ub.e);
+                    };
+                    
+                    m.relativePathTo = function(i) {
+                        return ((this.toURI()).relativize(i.toURI())).toString();
+                    };
+                    
+                    j.WW = function(k) { return j.FIND_INCLUDE | j.FIND_RECURSE; };
+                    
+                    m.find = function(h, f, o) {
+                        if (o == null) o = [];
+                        if (!h) h = j.WW;
+                        var Ya = this.listFiles();
+                        for (var jb = 0; jb < Ya.length; jb++) {
+                            var pb = h.call(null, Ya[jb]);
+                            if ((pb & j.FIND_INCLUDE) > 0) o.push(Ya[jb]);
+                            if (f && Ya[jb].isDirectory() && (pb & j.FIND_RECURSE) > 0) Ya[jb].find(h, f, o);
+                        }
+                        return jsx3.$A(o);
+                    };
+                    
+                    m.toURI = function() { return this._uri; };
+                    
+                    m.getRootDirectory = function() {
+                        var db = this;
+                        while (true) {
+                            var _ = db.getParentFile();
+                            if (!_) {
+                                if (db.isDirectory()) return db;
+                                else return null;
+                            } else db = _;
+                        }
+                    };
+                    
+                    m.toString = function() { return this.getAbsolutePath(); };
+                });
+
+                log("Loading File.js driver script...");
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "GI_Builder/plugins/jsx3.io.opfs/File.js?cb=" + Date.now();
+                script.onload = function() {
+                    log("Driver loaded successfully.", "#38b000");
+                    document.getElementById("status").textContent = "Running FS tests...";
+                    runFSTests();
+                };
+                script.onerror = function() {
+                    log("FAILED TO LOAD File.js script!", "#ff4d6d");
+                };
+                document.head.appendChild(script);
+            } catch (err) {
+                log("Bootstrap failed: " + err, "#ff4d6d");
+            }
+        }
+
+        function runFSTests() {
+            try {
+                log("Testing OPFSFileSystem instantiation...");
+                var fs = new jsx3.io.OPFSFileSystem();
+                log("FS Instance: " + fs, "#38b000");
+
+                log("\n1. Testing getFile for C:\\projects...");
+                var home = fs.getFile("C:\\projects");
+                log("Path: " + home.getPath());
+                log("URI: " + home.toURI());
+                log("Exists: " + home.exists());
+                log("IsDirectory: " + home.isDirectory());
+
+                log("\n2. Creating a test folder 'C:\\projects\\JSXAPPS\\OPFS'...");
+                var projDir = fs.getFile("C:\\projects\\JSXAPPS\\OPFS");
+                log("Resolved projDir: " + projDir.getPath());
+                log("URI of projDir: " + projDir.toURI());
+                projDir.mkdirs();
+                log("Created successfully. Exists: " + projDir.exists() + ", IsDirectory: " + projDir.isDirectory(), "#38b000");
+
+                log("\n3. Resolving and writing 'config.xml' inside 'OPFS' folder...");
+                var configFile = projDir.resolve("config.xml");
+                log("Resolved configFile path: " + configFile.getPath());
+                log("Resolved configFile URI: " + configFile.toURI(), "#ffb703");
+                
+                var success = configFile.write("<project>OPFS Project</project>");
+                log("Write Success: " + success);
+                log("File Exists: " + configFile.exists());
+                log("File IsFile: " + configFile.isFile());
+                log("Content: " + configFile.read(), "#38b000");
+
+                log("\n4. Listing files in 'C:\\projects\\JSXAPPS\\OPFS'...");
+                var files = projDir.listFiles();
+                log("Children Count: " + files.length);
+                files.forEach(function(f) {
+                    log("  - " + f.getName() + " (IsFile: " + f.isFile() + ")");
+                });
+
+                log("\n5. Testing relativePathTo check...");
+                var relative = home.relativePathTo(projDir);
+                log("Relative Path from Home: " + relative);
+                if (relative.startsWith("/")) {
+                    log("WARNING: Relative path starts with a slash! This will cause loading issues.", "#ff4d6d");
+                } else {
+                    log("SUCCESS: Relative path is correctly relative (no leading slash).", "#38b000");
+                }
+
+                document.getElementById("status").textContent = "Tests completed.";
+            } catch (err) {
+                log("Test failed with error: " + err, "#ff4d6d");
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>

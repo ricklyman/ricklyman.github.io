@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OPFS & localStorage Debugger</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background-color: #1e1e24; color: #e3e6ed; }
+        h2 { color: #9d4edd; }
+        pre { background-color: #111218; padding: 15px; border-radius: 5px; border: 1px solid #272c3d; overflow: auto; }
+        button { background-color: #9d4edd; border: none; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background-color: #7b2cbf; }
+    </style>
+</head>
+<body>
+    <h2>Virtual File System (localStorage)</h2>
+    <button onclick="checkLocalStorage()">Check localStorage</button>
+    <button onclick="clearLocalStorage()">Clear localStorage</button>
+    <pre id="local-output">Click button to check...</pre>
+
+    <h2>Origin Private File System (OPFS)</h2>
+    <button onclick="checkOPFS()">Check OPFS</button>
+    <button onclick="clearOPFS()">Clear OPFS</button>
+    <pre id="opfs-output">Click button to check...</pre>
+
+    <script>
+        function checkLocalStorage() {
+            const raw = localStorage.getItem("__OPFS_VIRTUAL_FS__");
+            if (raw) {
+                const data = JSON.parse(raw);
+                document.getElementById("local-output").textContent = JSON.stringify(data, null, 2);
+            } else {
+                document.getElementById("local-output").textContent = "localStorage key __OPFS_VIRTUAL_FS__ not found.";
+            }
+        }
+
+        function clearLocalStorage() {
+            if (confirm("Clear local storage virtual FS?")) {
+                localStorage.removeItem("__OPFS_VIRTUAL_FS__");
+                document.getElementById("local-output").textContent = "localStorage cleared.";
+            }
+        }
+
+        async function checkOPFS() {
+            if (!navigator.storage || !navigator.storage.getDirectory) {
+                document.getElementById("opfs-output").textContent = "OPFS is not supported in this browser.";
+                return;
+            }
+            try {
+                const root = await navigator.storage.getDirectory();
+                const filesList = [];
+                
+                async function scanDir(dirHandle, path) {
+                    for await (const entry of dirHandle.values()) {
+                        if (entry.kind === 'file') {
+                            const file = await entry.getFile();
+                            filesList.push({ path: path + "/" + entry.name, size: file.size });
+                        } else if (entry.kind === 'directory') {
+                            filesList.push({ path: path + "/" + entry.name, kind: 'directory' });
+                            await scanDir(entry, path + "/" + entry.name);
+                        }
+                    }
+                }
+                
+                await scanDir(root, "");
+                document.getElementById("opfs-output").textContent = JSON.stringify(filesList, null, 2);
+            } catch (err) {
+                document.getElementById("opfs-output").textContent = "OPFS error: " + err;
+            }
+        }
+
+        async function clearOPFS() {
+            if (!confirm("Clear OPFS root directory?")) return;
+            try {
+                const root = await navigator.storage.getDirectory();
+                for await (const entry of root.values()) {
+                    if (entry.kind === 'file') {
+                        await root.deleteEntry(entry.name);
+                    } else if (entry.kind === 'directory') {
+                        await root.deleteEntry(entry.name, { recursive: true });
+                    }
+                }
+                document.getElementById("opfs-output").textContent = "OPFS cleared.";
+            } catch (err) {
+                document.getElementById("opfs-output").textContent = "OPFS clear error: " + err;
+            }
+        }
+    </script>
+</body>
+</html>
