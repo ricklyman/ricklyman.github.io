@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dashboard utility page to inspect, manage, and clear General Interface virtual filesystems.">
+  <title>General Interface - VFS Manager</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+      --card-bg: rgba(30, 41, 59, 0.45);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-yellow: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header Styling */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1.5rem;
+    }
+
+    .title-group h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    .title-group p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
+    }
+
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (min-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr 2fr;
+      }
+    }
+
+    /* Dashboard Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title span.badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    /* Status Items */
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .status-item:last-child {
+      border-bottom: none;
+    }
+
+    .status-label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .status-val {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+    }
+
+    .status-val.green { color: var(--accent-green); }
+    .status-val.yellow { color: var(--accent-yellow); }
+
+    /* Buttons Panel */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      margin-top: 1.5rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, #0891b2 100%);
+      color: #020617;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: var(--accent-red);
+      color: white;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-warning {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .btn-warning:hover {
+      background: var(--accent-yellow);
+      color: black;
+      box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
+    }
+
+    /* File Explorer / Trees */
+    .file-explorer {
+      max-height: 550px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .explorer-header {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      padding: 0.8rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .explorer-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      align-items: center;
+      font-size: 0.85rem;
+      transition: background 0.15s ease;
+    }
+
+    .explorer-row:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .file-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .icon-file { color: var(--accent-cyan); }
+    .icon-folder { color: var(--accent-purple); }
+
+    .file-type {
+      color: var(--text-muted);
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 0.35rem 0.7rem;
+      border-radius: 5px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-cyan);
+    }
+
+    .action-btn.danger {
+      color: var(--accent-red);
+    }
+
+    .action-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--accent-red);
+    }
+
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    /* Modal dialog */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .modal {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .modal-close:hover {
+      color: white;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .code-view {
+      background: #020617;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #38bdf8;
+      white-space: pre-wrap;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1e293b;
+      border-left: 4px solid var(--accent-green);
+      padding: 1rem 1.5rem;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 2000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <header>
+    <div class="title-group">
+      <h1 id="main-heading">General Interface VFS Dashboard</h1>
+      <p>Inspect, manage, and reset virtual storage files and workspaces.</p>
+    </div>
+    <a href="GI_Builder.html" class="back-btn" id="btn-back">Launch GI Builder</a>
+  </header>
+
+  <div class="grid">
+    
+    <!-- Sidebar: Metrics and Tools -->
+    <div class="sidebar-column">
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-title">
+          <span>System Status</span>
+          <span class="badge" id="badge-active-fs">OPFS VFS</span>
+        </div>
+        
+        <div class="status-item">
+          <span class="status-label">Active Workspace</span>
+          <span class="status-val yellow" id="val-workspace">Loading...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Total Virtual Files</span>
+          <span class="status-val" id="val-total-files">0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Total Virtual Folders</span>
+          <span class="status-val" id="val-total-folders">0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">OPFS Storage API</span>
+          <span class="status-val green">Available</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">VFS Administration</div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btn-reload" onclick="refreshExplorer()">Reload Dashboard</button>
+          <button class="btn btn-warning" id="btn-reset-home" onclick="resetUserHome()">Reset Home settings</button>
+          <button class="btn btn-danger" id="btn-clear-opfs" onclick="clearOPFSStorage()">Format Virtual Drive (OPFS)</button>
+          <button class="btn btn-danger" id="btn-clear-local" onclick="clearLocalStorageVFS()">Clear VFS Cache (localStorage)</button>
+          <button class="btn btn-danger" id="btn-clear-db" onclick="clearIndexedDBVFS()">Format Local Disk handles (DB)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Panel: File Explorer -->
+    <div class="main-column">
+      <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+        <div class="card-title">Virtual File Explorer</div>
+        
+        <div class="file-explorer" id="explorer-view">
+          <div class="explorer-header">
+            <span>File Path</span>
+            <span>Type</span>
+            <span>Actions</span>
+          </div>
+          <div id="explorer-list-container">
+            <!-- Dynamic rows loaded here -->
+            <div class="empty-state">Loading virtual filesystem tree...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Inspector Modal -->
+<div class="modal-overlay" id="inspector-overlay" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-filename">File Content</span>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <pre class="code-view"><code id="modal-code">Loading content...</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notifications -->
+<div class="toast" id="toast-notify">VFS successfully cleared!</div>
+
+<script type="text/javascript">
+  const activeFs = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
+  const badgeActiveFs = document.getElementById("badge-active-fs");
+  const valWorkspace = document.getElementById("val-workspace");
+  const valTotalFiles = document.getElementById("val-total-files");
+  const valTotalFolders = document.getElementById("val-total-folders");
+  const explorerListContainer = document.getElementById("explorer-list-container");
+  const toastNotify = document.getElementById("toast-notify");
+
+  badgeActiveFs.textContent = activeFs.toUpperCase() + " VFS";
+
+  function getWorkspacePath() {
+    var home = localStorage.getItem("jsxuserhome") || "virtual/root/";
+    var vIdx = home.indexOf("/virtual/");
+    if (vIdx >= 0) {
+      home = home.substring(vIdx + 9);
+    } else if (home.indexOf("file:///root") === 0) {
+      home = home.replace("file:///root", "root");
+    }
+    if (home.endsWith("/") || home.endsWith("\\")) home = home.substring(0, home.length - 1);
+    return home || "root";
+  }
+
+  valWorkspace.textContent = getWorkspacePath();
+
+  function showToast(msg, color = "#10b981") {
+    toastNotify.textContent = msg;
+    toastNotify.style.borderLeftColor = color;
+    toastNotify.classList.add("show");
+    setTimeout(() => {
+      toastNotify.classList.remove("show");
+    }, 3000);
+  }
+
+  // Reload lists and explorer UI
+  async function refreshExplorer() {
+    explorerListContainer.innerHTML = '<div class="empty-state">Loading virtual filesystem tree...</div>';
+    
+    const fileList = [];
+    const folderList = new Set();
+    
+    // 1. Gather from localStorage virtual VFS
+    const cacheKey = activeFs === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
+    const cacheRaw = localStorage.getItem(cacheKey);
+    if (cacheRaw) {
+      try {
+        const cacheData = JSON.parse(cacheRaw);
+        if (cacheData.files) {
+          Object.keys(cacheData.files).forEach(f => {
+            fileList.push({
+              path: f,
+              origin: 'cache',
+              content: cacheData.files[f]
+            });
+          });
+        }
+        if (cacheData.directories) {
+          cacheData.directories.forEach(d => folderList.add(d));
+        }
+      } catch (e) {
+        console.error("Error parsing localStorage VFS: ", e);
+      }
+    }
+
+    // 2. Gather from OPFS recursively
+    if (activeFs === "opfs" && navigator.storage && navigator.storage.getDirectory) {
+      try {
+        const root = await navigator.storage.getDirectory();
+        
+        async function scan(dirHandle, currentPath) {
+          for await (const entry of dirHandle.values()) {
+            const path = currentPath ? (currentPath + "\\" + entry.name) : entry.name;
+            if (entry.kind === 'file') {
+              // Only add if not already in list from cache
+              if (!fileList.some(item => item.path.toLowerCase() === path.toLowerCase())) {
+                fileList.push({
+                  path: path,
+                  origin: 'opfs',
+                  handle: entry
+                });
+              }
+            } else if (entry.kind === 'directory') {
+              folderList.add(path);
+              await scan(entry, path);
+            }
+          }
+        }
+        await scan(root, "");
+      } catch (err) {
+        console.warn("OPFS listing error: ", err);
+      }
+    }
+
+    // Update Counts
+    valTotalFiles.textContent = fileList.length;
+    valTotalFolders.textContent = folderList.size;
+
+    // Build Rows
+    if (fileList.length === 0 && folderList.size === 0) {
+      explorerListContainer.innerHTML = '<div class="empty-state">Your virtual drive is currently empty.</div>';
+      return;
+    }
+
+    explorerListContainer.innerHTML = '';
+    
+    // Draw Folders first
+    Array.from(folderList).sort().forEach(folder => {
+      const row = document.createElement("div");
+      row.className = "explorer-row";
+      
+      const nameCol = document.createElement("div");
+      nameCol.className = "file-name";
+      nameCol.innerHTML = '<span class="icon-folder">📁</span> ' + folder;
+      
+      const typeCol = document.createElement("div");
+      typeCol.className = "file-type";
+      typeCol.textContent = "Folder";
+      
+      const actionCol = document.createElement("div");
+      actionCol.className = "file-actions";
+      
+      const delBtn = document.createElement("button");
+      delBtn.className = "action-btn danger";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = () => deleteVirtualFolder(folder);
+      
+      actionCol.appendChild(delBtn);
+      
+      row.appendChild(nameCol);
+      row.appendChild(typeCol);
+      row.appendChild(actionCol);
+      explorerListContainer.appendChild(row);
+    });
+
+    // Draw Files
+    fileList.sort((a,b) => a.path.localeCompare(b.path)).forEach((file, index) => {
+      const row = document.createElement("div");
+      row.className = "explorer-row";
+      
+      const nameCol = document.createElement("div");
+      nameCol.className = "file-name";
+      nameCol.innerHTML = '<span class="icon-file">📄</span> ' + file.path;
+      
+      const typeCol = document.createElement("div");
+      typeCol.className = "file-type";
+      typeCol.textContent = file.path.endsWith('.xml') ? 'XML Document' : (file.path.endsWith('.js') ? 'Javascript' : 'File');
+      
+      const actionCol = document.createElement("div");
+      actionCol.className = "file-actions";
+      
+      const viewBtn = document.createElement("button");
+      viewBtn.className = "action-btn";
+      viewBtn.textContent = "View";
+      viewBtn.onclick = () => inspectVirtualFile(file);
+      
+      const delBtn = document.createElement("button");
+      delBtn.className = "action-btn danger";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = () => deleteVirtualFile(file.path, file.origin, file.handle);
+      
+      actionCol.appendChild(viewBtn);
+      actionCol.appendChild(delBtn);
+      
+      row.appendChild(nameCol);
+      row.appendChild(typeCol);
+      row.appendChild(actionCol);
+      explorerListContainer.appendChild(row);
+    });
+  }
+
+  // Inspect file content
+  async function inspectVirtualFile(file) {
+    document.getElementById("modal-filename").textContent = file.path;
+    const modalCode = document.getElementById("modal-code");
+    modalCode.textContent = "Reading content...";
+    document.getElementById("inspector-overlay").style.display = "flex";
+    
+    try {
+      let content = "";
+      if (file.origin === 'cache') {
+        content = file.content;
+      } else if (file.handle) {
+        const f = await file.handle.getFile();
+        content = await f.text();
+      }
+      modalCode.textContent = content || "[Empty file]";
+    } catch (e) {
+      modalCode.textContent = "Error reading file content: " + e.message;
+    }
+  }
+
+  function closeModal() {
+    document.getElementById("inspector-overlay").style.display = "none";
+  }
+
+  // Delete virtual file
+  async function deleteVirtualFile(path, origin, handle) {
+    if (!confirm(`Are you sure you want to delete file:\n${path}?`)) return;
+
+    // 1. Remove from localStorage VFS cache
+    const cacheKey = activeFs === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
+    const cacheRaw = localStorage.getItem(cacheKey);
+    if (cacheRaw) {
+      try {
+        const cacheData = JSON.parse(cacheRaw);
+        if (cacheData.files) {
+          const lowerPath = path.toLowerCase();
+          const matched = Object.keys(cacheData.files).find(k => k.toLowerCase() === lowerPath);
+          if (matched) {
+            delete cacheData.files[matched];
+            localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. Remove from OPFS
+    if (activeFs === "opfs" && navigator.storage && navigator.storage.getDirectory) {
+      try {
+        const root = await navigator.storage.getDirectory();
+        const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
+        let dirHandle = root;
+        for (let i = 0; i < parts.length - 1; i++) {
+          let part = parts[i];
+          if (part.endsWith(":")) part = part.slice(0, -1);
+          dirHandle = await dirHandle.getDirectoryHandle(part);
+        }
+        const fileName = parts[parts.length - 1];
+        await dirHandle.removeEntry(fileName);
+      } catch (e) {
+        console.warn("Could not delete from OPFS handles: ", e);
+      }
+    }
+
+    showToast("File deleted successfully!");
+    refreshExplorer();
+  }
+
+  // Delete virtual folder
+  async function deleteVirtualFolder(folderPath) {
+    if (!confirm(`Are you sure you want to delete folder and ALL its contents:\n${folderPath}?`)) return;
+
+    // 1. Remove from localStorage VFS Cache directories & files recursively
+    const cacheKey = activeFs === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
+    const cacheRaw = localStorage.getItem(cacheKey);
+    if (cacheRaw) {
+      try {
+        const cacheData = JSON.parse(cacheRaw);
+        const lowerPrefix = folderPath.toLowerCase() + "\\";
+        if (cacheData.files) {
+          Object.keys(cacheData.files).forEach(f => {
+            if (f.toLowerCase().indexOf(lowerPrefix) === 0 || f.toLowerCase() === folderPath.toLowerCase()) {
+              delete cacheData.files[f];
+            }
+          });
+        }
+        if (cacheData.directories) {
+          cacheData.directories = cacheData.directories.filter(d => {
+            return d.toLowerCase().indexOf(lowerPrefix) !== 0 && d.toLowerCase() !== folderPath.toLowerCase();
+          });
+        }
+        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      } catch (e) {}
+    }
+
+    // 2. Remove from OPFS
+    if (activeFs === "opfs" && navigator.storage && navigator.storage.getDirectory) {
+      try {
+        const root = await navigator.storage.getDirectory();
+        const parts = folderPath.replace(/\\/g, "/").split("/").filter(Boolean);
+        let dirHandle = root;
+        for (let i = 0; i < parts.length - 1; i++) {
+          let part = parts[i];
+          if (part.endsWith(":")) part = part.slice(0, -1);
+          dirHandle = await dirHandle.getDirectoryHandle(part);
+        }
+        const folderName = parts[parts.length - 1];
+        await dirHandle.removeEntry(folderName, { recursive: true });
+      } catch (e) {
+        console.warn("Could not delete folder from OPFS: ", e);
+      }
+    }
+
+    showToast("Folder deleted successfully!");
+    refreshExplorer();
+  }
+
+  // Clear VFS cache in localStorage
+  function clearLocalStorageVFS() {
+    if (!confirm("Are you sure you want to clear the entire localStorage VFS cache?\n\nThis will remove all workspace registry cache files, but won't delete files saved directly to physical disk or OPFS.")) return;
+    
+    const cacheKey = activeFs === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
+    localStorage.removeItem(cacheKey);
+    localStorage.removeItem("__RUNNER_VFS_CACHE__");
+    
+    showToast("VFS localStorage Cache cleared!", "#ef4444");
+    refreshExplorer();
+  }
+
+  // Format OPFS Virtual Drive
+  async function clearOPFSStorage() {
+    if (!confirm("⚠️ CAUTION: Are you sure you want to format your OPFS Virtual Drive?\n\nThis will recursively delete ALL files and folders inside the browser's OPFS memory. This action cannot be undone!")) return;
+    
+    if (navigator.storage && navigator.storage.getDirectory) {
+      try {
+        const root = await navigator.storage.getDirectory();
+        for await (const entry of root.values()) {
+          await root.removeEntry(entry.name, { recursive: true });
+        }
+        showToast("Virtual Drive (OPFS) formatted successfully!", "#ef4444");
+      } catch (e) {
+        alert("Error clearing OPFS directory: " + e.message);
+      }
+    } else {
+      alert("OPFS API is not supported in this browser version.");
+    }
+    refreshExplorer();
+  }
+
+  // Reset user settings and home directory path
+  function resetUserHome() {
+    if (!confirm("Do you want to reset your General Interface workspace setting?\n\nThis will delete your active workspace directory registration. On next load, you will be prompted to select or create a new workspace.")) return;
+    
+    localStorage.removeItem("__SAVED_WORKSPACE_URI__");
+    localStorage.removeItem("jsxuserhome");
+    localStorage.removeItem("__ACTIVE_FILESYSTEM_ID__");
+    
+    showToast("Workspace configuration reset!", "#eab308");
+    valWorkspace.textContent = "Cleared (Prompt on next boot)";
+  }
+
+  // Format Local disk handles database
+  function clearIndexedDBVFS() {
+    if (!confirm("Format Local Disk folders database?\n\nThis deletes the IndexedDB table that remembers your selected physical directory handle. You will have to re-select your local folder on next boot.")) return;
+    
+    var req = indexedDB.deleteDatabase("LocalDiskVFS_DB");
+    req.onsuccess = function() {
+      showToast("Local Disk handles database formatted!", "#ef4444");
+      refreshExplorer();
+    };
+    req.onerror = function() {
+      alert("Failed to delete IndexedDB database.");
+    };
+  }
+
+  // Run on start
+  window.addEventListener("load", refreshExplorer);
+</script>
+
+</body>
+</html>

@@ -3,12 +3,102 @@
   ~ Use, modification, and distribution subject to terms of license.
   -->
 
-<html>
+<html style="width:100%;height:100%;margin:0;padding:0;overflow:hidden;">
 <head>
   <title>General Interface</title>
+  <style>
+    html, body {
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 100% !important;
+      min-height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      background-color: #0f172a !important;
+    }
+    #jsxmain, #JSX, #JSXROOT, #JSXBODY {
+      position: absolute !important;
+      top: 0px !important;
+      left: 0px !important;
+      right: 0px !important;
+      bottom: 0px !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+      background-color: #0f172a !important;
+      z-index: 100 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    .jsx30block, .jsx30layoutgrid, .jsx30window {
+      position: absolute !important;
+      box-sizing: border-box !important;
+    }
+    #gi-stage-panel {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      width: 380px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      color: #e2e8f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      font-size: 12px;
+      z-index: 9999999;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+    }
+    #gi-stage-panel-header {
+      padding: 10px 14px;
+      background: rgba(30, 41, 59, 0.8);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 600;
+      color: #38bdf8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #gi-stage-panel-body {
+      padding: 10px 14px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .gi-stage-row {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .gi-stage-row.pending { color: #94a3b8; }
+    .gi-stage-row.running { color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; }
+    .gi-stage-row.success { color: #4ade80; background: rgba(74, 222, 128, 0.08); border-left: 3px solid #4ade80; }
+    .gi-stage-row.error { color: #f87171; background: rgba(248, 113, 113, 0.15); border-left: 3px solid #f87171; }
+    .gi-stage-icon { margin-right: 8px; font-weight: bold; width: 16px; text-align: center; }
+  </style>
   <!-- Debug Overlay for Console Errors -->
   <script type="text/javascript">
     (function() {
+      try {
+        var wsUri = localStorage.getItem("__SAVED_WORKSPACE_URI__") || localStorage.getItem("jsxuserhome");
+        if (wsUri && wsUri.indexOf("file:") === 0) {
+          var loc = window.location;
+          var dir = loc.pathname.substring(0, loc.pathname.lastIndexOf("/") + 1);
+          var base = loc.origin + dir + "virtual";
+          var converted = wsUri.replace("file:///root", base);
+          localStorage.setItem("__SAVED_WORKSPACE_URI__", converted);
+          localStorage.setItem("jsxuserhome", converted);
+          console.log("[VFS-BOOT] Migrated workspace URI to: " + converted);
+        }
+      } catch(e) {}
+
       var logContainer = document.createElement("div");
       logContainer.style.position = "fixed";
       logContainer.style.bottom = "0";
@@ -79,7 +169,9 @@
       var originalWarn = console.warn;
       console.warn = function() {
         originalWarn.apply(console, arguments);
-        addLog("[CONSOLE.WARN] " + Array.prototype.slice.call(arguments).join(" "), "#ffb703");
+        var msg = Array.prototype.slice.call(arguments).join(" ");
+        if (msg.indexOf("boot.env_reset") >= 0) return;
+        addLog("[CONSOLE.WARN] " + msg, "#ffb703");
       };
 
       var originalLog = console.log;
@@ -95,6 +187,24 @@
     (function() {
       var OriginalXHR = window.XMLHttpRequest;
       
+      function getWorkspace() {
+        var home = localStorage.getItem("jsxuserhome") || "virtual/root/";
+        var vIdx = home.indexOf("virtual/");
+        if (vIdx >= 0) {
+          home = home.substring(vIdx + 8);
+        } else if (home.indexOf("file:///root") === 0) {
+          home = home.replace("file:///root", "root");
+        }
+        if (home.endsWith("\\") || home.endsWith("/")) home = home.substring(0, home.length - 1);
+        return home.replace(/\//g, "\\");
+      }
+
+      function getVirtualBase() {
+        var loc = window.location;
+        var dir = loc.pathname.substring(0, loc.pathname.lastIndexOf("/") + 1);
+        return loc.origin + dir + "virtual";
+      }
+
       async function readOPFSFile(virtualPath) {
         if (!navigator.storage || !navigator.storage.getDirectory) return null;
         try {
@@ -113,32 +223,42 @@
           const file = await fileHandle.getFile();
           return await file.text();
         } catch (err) {
-          console.warn("[XHR-INTERCEPT] readOPFSFile error for " + virtualPath + ":", err);
+          console.debug("[XHR-INTERCEPT] readOPFSFile not found for " + virtualPath);
           return null;
         }
       }
 
       async function readLocalFile(virtualPath) {
         try {
-          const handle = await new Promise(function(resolve, reject) {
-            var request = indexedDB.open("LocalDiskVFS_DB", 1);
-            request.onsuccess = function(e) {
-              var db = e.target.result;
-              try {
-                var tx = db.transaction("handles", "readonly");
-                var store = tx.objectStore("handles");
-                var req = store.get("project_root");
-                req.onsuccess = function(ev) { resolve(ev.target.result); };
-                req.onerror = function() { reject(); };
-              } catch(ex) { reject(); }
-            };
-            request.onerror = function() { reject(); };
+          const handle = await new Promise(function(resolve) {
+            var timer = setTimeout(function() { resolve(null); }, 300);
+            if (!window.indexedDB) return resolve(null);
+            try {
+              var request = indexedDB.open("LocalDiskVFS_DB", 1);
+              request.onsuccess = function(e) {
+                clearTimeout(timer);
+                var db = e.target.result;
+                try {
+                  var tx = db.transaction("handles", "readonly");
+                  var store = tx.objectStore("handles");
+                  var req = store.get("project_root");
+                  req.onsuccess = function(ev) { resolve(ev.target.result); };
+                  req.onerror = function() { resolve(null); };
+                } catch(ex) { resolve(null); }
+              };
+              request.onerror = function() { clearTimeout(timer); resolve(null); };
+              request.onblocked = function() { clearTimeout(timer); resolve(null); };
+            } catch(ex) { clearTimeout(timer); resolve(null); }
           });
           if (!handle) return null;
           
           var relativePath = virtualPath;
-          if (virtualPath.toLowerCase().indexOf("c:\\projects\\tibcogi") === 0) {
-            relativePath = virtualPath.substring(19);
+          var ws = getWorkspace();
+          if (ws.toLowerCase().startsWith("virtual\\")) ws = ws.substring(8);
+          if (ws.toLowerCase().startsWith("virtual/")) ws = ws.substring(8);
+
+          if (virtualPath.toLowerCase().indexOf(ws.toLowerCase()) === 0) {
+            relativePath = virtualPath.substring(ws.length);
           }
           var parts = relativePath.split("\\").filter(Boolean);
           if (parts.length === 0) return null;
@@ -152,13 +272,12 @@
           const file = await fileHandle.getFile();
           return await file.text();
         } catch (err) {
-          console.warn("[XHR-INTERCEPT] readLocalFile error for " + virtualPath + ":", err);
+          console.debug("[XHR-INTERCEPT] readLocalFile not found for " + virtualPath);
           return null;
         }
       }
 
       function MockXHR() {
-        var xhr = new OriginalXHR();
         var isIntercepted = false;
         var interceptedUrl = "";
         var responseText = "";
@@ -173,9 +292,85 @@
         this.onerror = null;
         this.onloadend = null;
         
+        var fireResponse = function(text, statusCode) {
+          responseText = text;
+          status = statusCode;
+          readyState = 4;
+          if (isAsync) {
+            setTimeout(fireEvents, 0);
+          } else {
+            fireEvents();
+          }
+        };
+        
+        var fireEvents = function() {
+          if (self.onreadystatechange) self.onreadystatechange();
+          if (status === 200 || status === 304) {
+            if (self.onload) self.onload();
+          } else {
+            if (self.onerror) self.onerror();
+          }
+          if (self.onloadend) self.onloadend();
+        };
+
+        var doHttpPassthrough = function(url, async, postData) {
+          try {
+            var cleanUrl = url;
+            var vIdx = url.toLowerCase().indexOf("virtual/");
+            if (vIdx >= 0) {
+              cleanUrl = url.substring(0, vIdx) + url.substring(vIdx + 8);
+            }
+            var ws = getWorkspace();
+            if (ws) {
+              var wsSlash = ws.toLowerCase() + "/";
+              var wsIdx = cleanUrl.toLowerCase().indexOf(wsSlash);
+              if (wsIdx >= 0) {
+                cleanUrl = cleanUrl.substring(0, wsIdx) + cleanUrl.substring(wsIdx + wsSlash.length);
+              }
+              var wsBack = ws.toLowerCase() + "\\";
+              var wsIdxB = cleanUrl.toLowerCase().indexOf(wsBack);
+              if (wsIdxB >= 0) {
+                cleanUrl = cleanUrl.substring(0, wsIdxB) + cleanUrl.substring(wsIdxB + wsBack.length);
+              }
+            }
+            console.log("[XHR-INTERCEPT] Cleaned passthrough URL: " + url + " -> " + cleanUrl);
+            if (cleanUrl.indexOf("_ijt=") < 0 && window.location.search.indexOf("_ijt=") >= 0) {
+              var separator = cleanUrl.indexOf("?") >= 0 ? "&" : "?";
+              cleanUrl += separator + window.location.search.substring(1);
+            }
+            var passXHR = new OriginalXHR();
+            passXHR.open("GET", cleanUrl, async);
+            if (async) {
+              passXHR.onreadystatechange = function() {
+                if (passXHR.readyState === 4) {
+                  fireResponse(passXHR.responseText, passXHR.status);
+                }
+              };
+              passXHR.send(postData);
+            } else {
+              passXHR.send(postData);
+              fireResponse(passXHR.responseText, passXHR.status);
+            }
+          } catch(e) {
+            console.error("[XHR-INTERCEPT] Passthrough error for " + url + ":", e);
+            fireResponse("", 404);
+          }
+        };
+
         this.open = function(method, url, async, user, password) {
           isAsync = (async !== false);
-          if (url && url.indexOf("file:") === 0) {
+          var lowerUrl = url ? url.toLowerCase() : "";
+          var virtualBase = getVirtualBase().toLowerCase();
+          
+          var realUrl = url;
+          if (realUrl) {
+            var vIdx = lowerUrl.indexOf("virtual/");
+            if (vIdx >= 0) realUrl = realUrl.substring(0, vIdx) + realUrl.substring(vIdx + 8);
+            var vIdxB = lowerUrl.indexOf("virtual\\");
+            if (vIdxB >= 0) realUrl = realUrl.substring(0, vIdxB) + realUrl.substring(vIdxB + 8);
+          }
+
+          if (url && (url.indexOf("file:") === 0 || lowerUrl.indexOf(virtualBase) === 0 || /\.(xml|js|json|jsx|properties|xsl|cdf)$/i.test(url))) {
             isIntercepted = true;
             interceptedUrl = url;
             status = 0;
@@ -184,167 +379,254 @@
             console.log("[XHR-INTERCEPT] Intercepting open for: " + url + " (async: " + isAsync + ")");
             if (self.onreadystatechange) self.onreadystatechange();
           } else {
-            xhr.open(method, url, async, user, password);
+            isIntercepted = false;
+            this._passXHR = new OriginalXHR();
+            this._passXHR.open(method, realUrl, async, user, password);
           }
         };
-        
+
         this.send = function(data) {
-          if (isIntercepted) {
-            var path = decodeURIComponent(interceptedUrl);
-            if (path.indexOf("file://") === 0) {
-              path = path.substring(7);
-            } else if (path.indexOf("file:/") === 0) {
-              path = path.substring(6);
-            }
-            if (path.startsWith("/")) path = path.substring(1);
-            
-            // Normalize path separators to Windows backslashes and collapse duplicate backslashes
-            path = path.replace(/\//g, "\\").replace(/\\+/g, "\\");
-            
-            // Load Virtual File System based on the active provider
-            var vfsFiles = {};
-            var activeFs = "opfs";
-            try {
-              activeFs = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
-              var runnerCacheRaw = localStorage.getItem("__RUNNER_VFS_CACHE__");
-              console.log("[XHR-INTERCEPT] Active FS: " + activeFs + ", Cache raw len: " + (runnerCacheRaw ? runnerCacheRaw.length : "null"));
-              if (runnerCacheRaw) {
-                vfsFiles = JSON.parse(runnerCacheRaw) || {};
-                var keys = Object.keys(vfsFiles);
-                console.log("[XHR-INTERCEPT] Loaded " + keys.length + " files from RUNNER_VFS_CACHE. Keys: " + JSON.stringify(keys));
-              } else {
-                var cacheKey = activeFs === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
-                var raw = localStorage.getItem(cacheKey);
-                if (raw) {
-                  vfsFiles = JSON.parse(raw).files || {};
-                  console.log("[XHR-INTERCEPT] Loaded " + Object.keys(vfsFiles).length + " files from localStorage " + cacheKey);
+          if (!isIntercepted) {
+            var pass = this._passXHR;
+            if (pass) {
+              pass.onreadystatechange = function() {
+                self.readyState = pass.readyState;
+                self.status = pass.status;
+                self.responseText = pass.responseText;
+                self.responseXML = pass.responseXML;
+                if (self.onreadystatechange) self.onreadystatechange();
+                if (pass.readyState === 4) {
+                  if (pass.status === 200 || pass.status === 304) {
+                    if (self.onload) self.onload();
+                  } else {
+                    if (self.onerror) self.onerror();
+                  }
+                  if (self.onloadend) self.onloadend();
                 }
-              }
-            } catch (e) {
-              console.warn("[XHR-INTERCEPT] Failed to parse localStorage VFS:", e);
+              };
+              pass.send(data);
             }
-            
-            var globalVFS = window.__VFS_FILES__ || {};
-            var globalFiles = globalVFS[activeFs] || {};
-            
-            var fireResponse = function(text, statusCode) {
-              responseText = text;
-              status = statusCode;
-              readyState = 4;
-              if (isAsync) {
-                setTimeout(fireEvents, 0);
-              } else {
-                fireEvents();
-              }
-            };
-            
-            var fireEvents = function() {
-              if (self.onreadystatechange) self.onreadystatechange();
-              if (status === 200) {
-                if (self.onload) self.onload();
-              } else {
-                if (self.onerror) self.onerror();
-              }
-              if (self.onloadend) self.onloadend();
-            };
-            
-            var openerVFS = {};
-            try {
-              if (window.opener && window.opener.__VFS_FILES__) {
-                openerVFS = window.opener.__VFS_FILES__;
-              }
-            } catch (e) {
-              console.warn("[XHR-INTERCEPT] Failed to access window.opener.__VFS_FILES__:", e);
+            return;
+          }
+
+          var path = decodeURIComponent(interceptedUrl);
+          if (path.indexOf("file://") === 0) {
+            path = path.substring(7);
+          } else if (path.indexOf("file:/") === 0) {
+            path = path.substring(6);
+          } else {
+            var vIdx = path.toLowerCase().indexOf("virtual/");
+            if (vIdx >= 0) {
+              path = path.substring(vIdx + 8);
             }
-            var openerFiles = openerVFS[activeFs] || {};
+          }
+          if (path.startsWith("/")) path = path.substring(1);
+          path = path.replace(/\//g, "\\").replace(/\\+/g, "\\");
+
+          var ws = getWorkspace();
+          if (ws.toLowerCase().startsWith("virtual\\")) ws = ws.substring(8);
+          if (ws.toLowerCase().startsWith("virtual/")) ws = ws.substring(8);
+
+          var pLower = path.toLowerCase();
+          if (pLower.indexOf("root\\") === 0) {
+            path = ws + path.substring(4);
+          } else if (pLower === "root") {
+            path = ws;
+          } else {
+            if (pLower.indexOf("c:\\") !== 0 && pLower.indexOf("d:\\") !== 0 && !pLower.startsWith("jsx\\") && !pLower.startsWith("gi_builder\\")) {
+              if (pLower.indexOf(ws.toLowerCase() + "\\") !== 0 && pLower !== ws.toLowerCase()) {
+                path = ws + "\\" + path;
+              }
+            }
+          }
+
+          var activeFs = "opfs";
+          var vfsFiles = {};
+          try {
+            activeFs = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
             
-            var pathLower = path.toLowerCase();
-            var matchedVfsKey = Object.keys(vfsFiles).find(function(k) { return k.toLowerCase() === pathLower; });
-            var matchedGlobalKey = Object.keys(globalFiles).find(function(k) { return k.toLowerCase() === pathLower; });
-            var matchedOpenerKey = Object.keys(openerFiles).find(function(k) { return k.toLowerCase() === pathLower; });
-            
-            if (matchedVfsKey) {
-              console.log("[XHR-INTERCEPT] Read Success (localStorage cache): " + path);
-              fireResponse(vfsFiles[matchedVfsKey], 200);
-            } else if (matchedGlobalKey) {
-              console.log("[XHR-INTERCEPT] Read Success (in-memory VFS): " + path);
-              fireResponse(globalFiles[matchedGlobalKey], 200);
-            } else if (matchedOpenerKey) {
-              console.log("[XHR-INTERCEPT] Read Success (opener VFS): " + path);
-              fireResponse(openerFiles[matchedOpenerKey], 200);
-            } else if (isAsync) {
-              console.log("[XHR-INTERCEPT] File not in memory yet, attempting async physical read: " + path);
-              var readPromise = activeFs === "local" ? readLocalFile(path) : readOPFSFile(path);
-              readPromise.then(function(content) {
-                if (content !== null) {
-                  console.log("[XHR-INTERCEPT] Async Physical Read Success: " + path);
-                  globalFiles[path] = content;
-                  fireResponse(content, 200);
+            // 1. Persistent storage
+            var persistentKey = activeFs === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
+            var persistentRaw = localStorage.getItem(persistentKey);
+            if (persistentRaw) {
+              try {
+                var pData = JSON.parse(persistentRaw);
+                if (pData && pData.files) Object.assign(vfsFiles, pData.files);
+              } catch(e) {}
+            }
+
+            // 2. Runner cache overlay
+            var runnerCacheRaw = localStorage.getItem("__RUNNER_VFS_CACHE__");
+            if (runnerCacheRaw) {
+              try {
+                var rData = JSON.parse(runnerCacheRaw);
+                if (rData && typeof rData === "object" && !Array.isArray(rData)) Object.assign(vfsFiles, rData);
+              } catch(e) {}
+            }
+
+            // 3. Opener VFS overlay
+            if (window.opener && window.opener.__VFS_FILES__ && window.opener.__VFS_FILES__[activeFs]) {
+              Object.assign(vfsFiles, window.opener.__VFS_FILES__[activeFs]);
+            }
+
+            // 4. Local window VFS overlay
+            if (window.__VFS_FILES__ && window.__VFS_FILES__[activeFs]) {
+              Object.assign(vfsFiles, window.__VFS_FILES__[activeFs]);
+            }
+          } catch (e) {}
+
+          var globalVFS = window.__VFS_FILES__ || {};
+          var globalFiles = globalVFS[activeFs] || {};
+
+          var openerVFS = {};
+          try {
+            if (window.opener && window.opener.__VFS_FILES__) openerVFS = window.opener.__VFS_FILES__;
+          } catch (e) {}
+          var openerFiles = openerVFS[activeFs] || {};
+
+          function findVFSKey(obj, targetPathLower) {
+            if (!obj) return null;
+            var keys = Object.keys(obj);
+            if (!targetPathLower) return null;
+
+            var normalizedTarget = targetPathLower.replace(/\//g, "\\");
+            var exact = keys.find(function(k) { return k.toLowerCase().replace(/\//g, "\\") === normalizedTarget; });
+            if (exact) return exact;
+
+            var baseName = normalizedTarget.substring(normalizedTarget.lastIndexOf("\\") + 1);
+
+            return keys.find(function(k) {
+              var kLower = k.toLowerCase().replace(/\//g, "\\");
+              return kLower === normalizedTarget ||
+                     kLower.endsWith("\\" + normalizedTarget) ||
+                     normalizedTarget.endsWith("\\" + kLower) ||
+                     kLower === baseName ||
+                     kLower.endsWith("\\" + baseName);
+            }) || null;
+          }
+
+          window.DEFAULT_CONFIG_XML = '<data>\n  <record jsxid="version" type="string">1.0</record>\n  <record jsxid="jsxversion" type="string">3.2</record>\n  <record jsxid="caption" type="string">Application</record>\n  <record jsxid="mode" type="boolean">true</record>\n  <record jsxid="namespace" type="string">eg</record>\n  <record jsxid="cancelerror" type="boolean">true</record>\n  <record jsxid="cancelrightclick" type="boolean">true</record>\n  <record jsxid="left" type="number">0</record>\n  <record jsxid="top" type="number">0</record>\n  <record jsxid="width" type="string">100%</record>\n  <record jsxid="height" type="string">100%</record>\n  <record jsxid="position" type="number">0</record>\n  <record jsxid="overflow" type="number">3</record>\n  <record jsxid="eventsvers" type="number">3.1</record>\n  <record jsxid="default_locale" type="string">en_US</record>\n  <record jsxid="onload" type="string"><![CDATA[]]></record>\n  <record jsxid="objectseturl" type="string"><![CDATA[components/appCanvas.xml]]></record>\n  <record jsxid="includes" type="array">\n    <record jsxid="0" type="map">\n      <record jsxid="id" type="string">appCanvas_component</record>\n      <record jsxid="type" type="string">component</record>\n      <record jsxid="src" type="string">components/appCanvas.xml</record>\n    </record>\n    <record jsxid="0" type="map">\n      <record jsxid="id" type="string">logic_js</record>\n      <record jsxid="type" type="string">script</record>\n      <record jsxid="load" type="number">1</record>\n      <record jsxid="src" type="string">js/logic.js</record>\n    </record>\n  </record>\n</data>';
+
+          window.DEFAULT_CANVAS_XML = '<serialization xmlns="urn:tibco.com/v3.0" jsxversion="3.9">\n' +
+            '  <name>App Canvas</name>\n' +
+            '  <object type="jsx3.gui.Block">\n' +
+            '    <variants left="0" top="0" jsxrelativeposition="0"/>\n' +
+            '    <strings name="appCanvas" width="100%" height="100%" jsxbgcolor="#0f172a" jsxstyle="position:absolute;top:0px;left:0px;width:100%;height:100%;background-color:#0f172a;"/>\n' +
+            '    <object type="jsx3.gui.Block">\n' +
+            '      <variants left="0" top="0" jsxrelativeposition="0"/>\n' +
+            '      <strings name="headerBlock" width="100%" height="50" jsxbgcolor="#1e293b" jsxstyle="position:absolute;top:0px;left:0px;width:100%;height:50px;background-color:#1e293b;color:#38bdf8;font-size:18px;font-weight:bold;padding:12px 20px;border-bottom:1px solid #334155;" text="⚡ General Interface Web Application"/>\n' +
+            '    </object>\n' +
+            '    <object type="jsx3.gui.Block">\n' +
+            '      <variants left="30" top="80" jsxrelativeposition="0"/>\n' +
+            '      <strings name="welcomeCard" width="500" height="160" jsxbgcolor="#1e293b" jsxstyle="position:absolute;top:80px;left:30px;width:500px;height:160px;background-color:#1e293b;color:#f8fafc;font-size:16px;padding:20px;border:1px solid #334155;border-radius:8px;" text="Welcome to General Interface!&lt;br/&gt;&lt;br/&gt;&lt;span style=&quot;font-size:13px;color:#94a3b8;&quot;&gt;Your application has loaded successfully from the Virtual File System (VFS).&lt;/span&gt;"/>\n' +
+            '    </object>\n' +
+            '  </object>\n' +
+            '</serialization>';
+
+          window.checkXMLContent = function(p, c) {
+            if (!p) return c;
+            var trimmed = c ? String(c).trim() : "";
+            if (p.toLowerCase().endsWith("config.xml") && (trimmed.length < 10 || !trimmed.startsWith("<"))) {
+              console.warn("[XHR-INTERCEPT] Auto-repairing empty/invalid config.xml for: " + p);
+              return window.DEFAULT_CONFIG_XML;
+            }
+            if (p.toLowerCase().endsWith("appcanvas.xml") && (trimmed.length < 20 || !trimmed.startsWith("<") || trimmed.indexOf("jsx3.gui") < 0)) {
+              console.warn("[XHR-INTERCEPT] Auto-repairing empty/invalid canvas XML for: " + p);
+              return window.DEFAULT_CANVAS_XML;
+            }
+            if (p.toLowerCase().endsWith(".xml") && (!trimmed || !trimmed.startsWith("<"))) {
+              console.warn("[XHR-INTERCEPT] Auto-repairing invalid XML document for: " + p);
+              return '<data jsxnamespace="propsbundle"><record jsxid="status" type="string">ok</record></data>';
+            }
+            return c;
+          };
+          var checkXMLContent = window.checkXMLContent;
+
+          var pathLower = path.toLowerCase();
+          var isSystemPath = (pathLower.startsWith("jsx\\") || pathLower.startsWith("gi_builder\\") || pathLower.startsWith("prototypes\\") || pathLower.indexOf("jsxapps\\samples\\") >= 0);
+
+          var matchedVfsKey = findVFSKey(vfsFiles, pathLower);
+          var matchedGlobalKey = findVFSKey(globalFiles, pathLower);
+          var matchedOpenerKey = findVFSKey(openerFiles, pathLower);
+
+          if (matchedVfsKey) {
+            console.log("[XHR-INTERCEPT] Read Success (localStorage cache): " + path);
+            fireResponse(checkXMLContent(path, vfsFiles[matchedVfsKey]), 200);
+          } else if (matchedGlobalKey) {
+            console.log("[XHR-INTERCEPT] Read Success (in-memory VFS): " + path);
+            fireResponse(checkXMLContent(path, globalFiles[matchedGlobalKey]), 200);
+          } else if (matchedOpenerKey) {
+            console.log("[XHR-INTERCEPT] Read Success (opener VFS): " + path);
+            fireResponse(checkXMLContent(path, openerFiles[matchedOpenerKey]), 200);
+          } else if (isSystemPath && interceptedUrl.indexOf("file:") !== 0) {
+            console.log("[XHR-INTERCEPT] Direct HTTP Passthrough for system path: " + interceptedUrl);
+            doHttpPassthrough(interceptedUrl, isAsync, data);
+          } else {
+            var defTemplate = checkXMLContent(path, null);
+            if (defTemplate !== null) {
+              console.warn("[XHR-INTERCEPT] File not in memory; serving auto-repair template for: " + path);
+              globalFiles[path] = defTemplate;
+              fireResponse(defTemplate, 200);
+              return;
+            }
+            console.log("[XHR-INTERCEPT] File not in memory yet, attempting async physical read: " + path);
+            var readPromise = activeFs === "local" ? readLocalFile(path) : readOPFSFile(path);
+            readPromise.then(function(content) {
+              content = checkXMLContent(path, content);
+              if (content !== null) {
+                console.log("[XHR-INTERCEPT] Async Physical Read Success: " + path);
+                globalFiles[path] = content;
+                fireResponse(content, 200);
+              } else {
+                if (interceptedUrl.indexOf("file:") !== 0) {
+                  console.log("[XHR-INTERCEPT] Passthrough to real HTTP XHR for: " + interceptedUrl);
+                  doHttpPassthrough(interceptedUrl, isAsync, data);
                 } else {
                   console.warn("[XHR-INTERCEPT] 404 Not Found (Physical Read Failed): " + path);
                   fireResponse("", 404);
                 }
-              }).catch(function() {
+              }
+            }).catch(function() {
+              if (interceptedUrl.indexOf("file:") !== 0) {
+                doHttpPassthrough(interceptedUrl, isAsync, data);
+              } else {
                 fireResponse("", 404);
-              });
-            } else {
-              console.warn("[XHR-INTERCEPT] 404 Not Found (Sync request fallback): " + path);
-              fireResponse("", 404);
-            }
-          } else {
-            xhr.send(data);
+              }
+            });
           }
         };
-        
+
         Object.defineProperty(this, 'status', {
-          get: function() { return isIntercepted ? status : xhr.status; }
+          get: function() { return isIntercepted ? status : (this._passXHR ? this._passXHR.status : status); }
         });
-        
+        Object.defineProperty(this, 'statusText', {
+          get: function() { return isIntercepted ? (status === 200 ? "OK" : "Not Found") : (this._passXHR ? this._passXHR.statusText : ""); }
+        });
         Object.defineProperty(this, 'readyState', {
-          get: function() { return isIntercepted ? readyState : xhr.readyState; }
+          get: function() { return isIntercepted ? readyState : (this._passXHR ? this._passXHR.readyState : readyState); }
         });
-        
         Object.defineProperty(this, 'responseText', {
-          get: function() { return isIntercepted ? responseText : xhr.responseText; }
+          get: function() { return isIntercepted ? responseText : (this._passXHR ? this._passXHR.responseText : responseText); }
         });
-        
         Object.defineProperty(this, 'responseXML', {
           get: function() {
-            if (isIntercepted) {
-              if (!cachedXML && responseText) {
+            if (!isIntercepted) return this._passXHR ? this._passXHR.responseXML : null;
+            if (cachedXML) return cachedXML;
+            if (responseText) {
+              try {
                 var parser = new DOMParser();
                 cachedXML = parser.parseFromString(responseText, "text/xml");
-              }
-              return cachedXML;
+                return cachedXML;
+              } catch(e) {}
             }
-            return xhr.responseXML;
-          }
-        });
-        
-        this.abort = function() { if (!isIntercepted) xhr.abort(); };
-        this.setRequestHeader = function(header, value) { if (!isIntercepted) xhr.setRequestHeader(header, value); };
-        
-        this.getAllResponseHeaders = function() {
-          return isIntercepted ? "Content-Type: text/xml" : xhr.getAllResponseHeaders();
-        };
-        
-        this.getResponseHeader = function(header) {
-          if (isIntercepted) {
-            if (header.toLowerCase() === "content-type") return "text/xml";
             return null;
           }
-          return xhr.getResponseHeader(header);
-        };
-        
-        xhr.onreadystatechange = function() {
-          if (!isIntercepted) {
-            self.status = xhr.status;
-            self.readyState = xhr.readyState;
-            self.responseText = xhr.responseText;
-            self.responseXML = xhr.responseXML;
-            if (self.onreadystatechange) self.onreadystatechange();
-          }
-        };
+        });
+
+        this.setRequestHeader = function(h, v) { if (this._passXHR) this._passXHR.setRequestHeader(h, v); };
+        this.getResponseHeader = function(h) { return this._passXHR ? this._passXHR.getResponseHeader(h) : null; };
+        this.getAllResponseHeaders = function() { return this._passXHR ? this._passXHR.getAllResponseHeaders() : ""; };
+        this.abort = function() { if (this._passXHR) this._passXHR.abort(); };
       }
       
       window.XMLHttpRequest = MockXHR;
@@ -356,29 +638,505 @@
 <body bgcolor="#9898a5" scroll="no" 
     style="position:absolute;width:100%;height:100%;left:0px;top:0px;padding:0px;margin:0px;border:0px;overflow:hidden;">
 
-<div id="jsxmain" style="position:absolute;left:0px;top:0px;width:100%;height:100%;">
-  <script type="text/javascript">
-    // Secure appPath extraction using clean local variable and regex match
-    var url = window.location.href;
-    var match = url.match(/[?&]jsxapppath=([^&]+)/);
-    var appPath = match ? match[1] : "";
-    // If appPath ends with a trailing slash, strip it because the GI engine appends its own slashes
-    if (appPath && appPath.endsWith("/")) {
-      appPath = appPath.substring(0, appPath.length - 1);
-    }
-    document.write('<script type="text/javascript" src="JSX/js/JSX30.js" jsxapppath="' +
-        appPath + '"><'+'/script>');
-  </script>
-  
-  <!-- Load OPFS or Local driver based on active workspace selection -->
-  <script type="text/javascript">
-    var activeFs = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
-    var driverPath = activeFs === "local" 
-        ? "GI_Builder/plugins/jsx3.io.local/File.js" 
-        : "GI_Builder/plugins/jsx3.io.opfs/File_v9.js";
-    document.write('<script type="text/javascript" src="' + driverPath + '"><'+'/script>');
-  </script>
+<div id="jsxmain" style="position:absolute;left:0px;top:0px;width:100%;height:100%;"></div>
+<div id="vfs-app-overlay" style="position:absolute;left:0;top:0;width:100%;height:100%;z-index:9999;background:#0f172a;">
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <div style="position:absolute;top:0;left:0;right:0;height:56px;background:#1e293b;border-bottom:1px solid #334155;display:flex;align-items:center;padding:0 24px;">
+      <span style="color:#38bdf8;font-size:20px;font-weight:bold;">&#9889; General Interface Web Application</span>
+    </div>
+    <div style="position:absolute;top:90px;left:40px;max-width:600px;background:#1e293b;padding:32px;border-radius:12px;border:1px solid #334155;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
+      <h2 id="vfs-overlay-title" style="margin:0 0 12px 0;color:#e2e8f0;font-size:20px;">Loading Application...</h2>
+      <p id="vfs-overlay-msg" style="margin:0;font-size:15px;color:#94a3b8;line-height:1.6;">Waiting for General Interface engine to initialize...</p>
+    </div>
+  </div>
 </div>
+
+<script type="text/javascript">
+  // Immediate DOM diagnostic
+  (function() {
+    var ov = document.getElementById("vfs-app-overlay");
+    var jm = document.getElementById("jsxmain");
+    console.warn("[DIAG] Overlay element:", ov ? "EXISTS" : "MISSING");
+    console.warn("[DIAG] Overlay display:", ov ? ov.style.display : "N/A");
+    console.warn("[DIAG] Overlay computed display:", ov ? window.getComputedStyle(ov).display : "N/A");
+    console.warn("[DIAG] Overlay zIndex:", ov ? window.getComputedStyle(ov).zIndex : "N/A");
+    console.warn("[DIAG] Overlay offsetWidth:", ov ? ov.offsetWidth : "N/A");
+    console.warn("[DIAG] jsxmain element:", jm ? "EXISTS" : "MISSING");
+    console.warn("[DIAG] body children count:", document.body.children.length);
+    console.warn("[DIAG] body innerHTML length:", document.body.innerHTML.length);
+    
+    // Protect overlay from being removed
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        m.removedNodes.forEach(function(node) {
+          if (node.id === "vfs-app-overlay") {
+            console.error("[DIAG] OVERLAY WAS REMOVED FROM DOM!");
+            document.body.appendChild(node);
+          }
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true });
+  })();
+</script>
+
+<script type="text/javascript">
+    async function prefetchDir(dirHandle, prefix, vfsMap) {
+      if (!dirHandle) return;
+      try {
+        for await (const entry of dirHandle.values()) {
+          if (entry.kind === "file") {
+            try {
+              const file = await entry.getFile();
+              const text = await file.text();
+              vfsMap[prefix + entry.name] = text;
+              console.log("[VFS-BOOT] Prefetched file: " + prefix + entry.name + " (" + text.length + " bytes)");
+            } catch(e) {}
+          } else if (entry.kind === "directory") {
+            await prefetchDir(entry, prefix + entry.name + "\\", vfsMap);
+          }
+        }
+      } catch(e) {}
+    }
+
+    function readLocalHandle() {
+      return new Promise(function(resolve) {
+        if (!window.indexedDB) return resolve(null);
+        var request = indexedDB.open("LocalDiskVFS_DB", 1);
+        request.onsuccess = function(e) {
+          var db = e.target.result;
+          try {
+            var tx = db.transaction("handles", "readonly");
+            var store = tx.objectStore("handles");
+            var req = store.get("project_root");
+            req.onsuccess = function(ev) { resolve(ev.target.result || null); };
+            req.onerror = function() { resolve(null); };
+          } catch(ex) { resolve(null); }
+        };
+        request.onerror = function() { resolve(null); };
+      });
+    }
+
+    (function() {
+      function ensurePanel() {
+        if (!document.getElementById("gi-stage-panel")) {
+          var panel = document.createElement("div");
+          panel.id = "gi-stage-panel";
+          panel.innerHTML = 
+            '<div id="gi-stage-panel-header"><span>⚡ GI Project Loading Monitor</span><span id="gi-stage-status">Initializing...</span></div>' +
+            '<div id="gi-stage-panel-body">' +
+              '<div id="stage-1" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 1. Extracting App Path</div>' +
+              '<div id="stage-2" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 2. Workspace Storage Access</div>' +
+              '<div id="stage-3" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 3. Prefetching Project Files into Memory</div>' +
+              '<div id="stage-4" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 4. Loading Core Engine (JSX30.js)</div>' +
+              '<div id="stage-5" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 5. Intercepting Script ClassLoader</div>' +
+              '<div id="stage-6" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 6. Initializing VFS Storage Driver</div>' +
+              '<div id="stage-7" class="gi-stage-row pending"><span class="gi-stage-icon">⏳</span> 7. Booting Application & Painting UI</div>' +
+            '</div>';
+          var target = document.body || document.documentElement;
+          if (target) target.appendChild(panel);
+        }
+      }
+
+      window.setStageStatus = function(stageNum, state, message) {
+        ensurePanel();
+        var el = document.getElementById("stage-" + stageNum);
+        if (!el) return;
+        el.className = "gi-stage-row " + state;
+        var icon = state === "running" ? "🔄" : (state === "success" ? "✅" : (state === "error" ? "❌" : "⏳"));
+        var rawText = el.textContent || "";
+        var parts = rawText.split(".");
+        var numStr = parts[0] || stageNum;
+        var labelStr = parts[1] || "";
+        el.innerHTML = '<span class="gi-stage-icon">' + icon + '</span> ' + numStr + '. ' + (message || labelStr.trim());
+
+        var hdrStatus = document.getElementById("gi-stage-status");
+        if (hdrStatus) {
+          if (state === "error") {
+            hdrStatus.textContent = "Error at Stage " + stageNum;
+            hdrStatus.style.color = "#f87171";
+            alert("General Interface Launch Failure at Stage " + stageNum + ":\n" + message);
+          } else if (stageNum === 7 && state === "success") {
+            hdrStatus.textContent = "Ready";
+            hdrStatus.style.color = "#4ade80";
+            setTimeout(function() {
+              var panel = document.getElementById("gi-stage-panel");
+              if (panel) {
+                panel.style.transition = "opacity 0.8s ease";
+                panel.style.opacity = "0";
+                setTimeout(function() { panel.style.display = "none"; }, 800);
+              }
+            }, 1200);
+          } else if (state === "running") {
+            hdrStatus.textContent = "Stage " + stageNum + "/7...";
+          }
+        }
+      };
+    })();
+  </script>
+
+  <script type="text/javascript">
+    async function prefetchDir(dirHandle, prefix, vfsMap) {
+      if (!dirHandle) return;
+      try {
+        for await (const entry of dirHandle.values()) {
+          if (entry.kind === "file") {
+            try {
+              const file = await entry.getFile();
+              const text = await file.text();
+              vfsMap[prefix + entry.name] = text;
+              console.log("[VFS-BOOT] Prefetched file: " + prefix + entry.name + " (" + text.length + " bytes)");
+            } catch(e) {}
+          } else if (entry.kind === "directory") {
+            await prefetchDir(entry, prefix + entry.name + "\\", vfsMap);
+          }
+        }
+      } catch(e) {}
+    }
+
+    function readLocalHandle() {
+      return new Promise(function(resolve) {
+        var timer = setTimeout(function() { resolve(null); }, 300);
+        if (!window.indexedDB) return resolve(null);
+        try {
+          var request = indexedDB.open("LocalDiskVFS_DB", 1);
+          request.onsuccess = function(e) {
+            clearTimeout(timer);
+            var db = e.target.result;
+            try {
+              var tx = db.transaction("handles", "readonly");
+              var store = tx.objectStore("handles");
+              var req = store.get("project_root");
+              req.onsuccess = function(ev) { resolve(ev.target.result || null); };
+              req.onerror = function() { resolve(null); };
+            } catch(ex) { resolve(null); }
+          };
+          request.onerror = function() { clearTimeout(timer); resolve(null); };
+          request.onblocked = function() { clearTimeout(timer); resolve(null); };
+        } catch(ex) { clearTimeout(timer); resolve(null); }
+      });
+    }
+
+    (async function bootRunner() {
+      if (window.setStageStatus) window.setStageStatus(1, "running", "Extracting App Path...");
+      var url = window.location.href;
+      var match = url.match(/[?&]jsxapppath=([^&]+)/);
+      var appPath = match ? decodeURIComponent(match[1]) : "";
+      if (appPath && appPath.endsWith("/")) {
+        appPath = appPath.substring(0, appPath.length - 1);
+      }
+
+      if (window.setStageStatus) window.setStageStatus(1, "success", "App Path: " + (appPath || "Default"));
+
+      var activeFs = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
+      if (!window.__VFS_FILES__) window.__VFS_FILES__ = {};
+      if (!window.__VFS_FILES__[activeFs]) window.__VFS_FILES__[activeFs] = {};
+      var vfs = window.__VFS_FILES__[activeFs];
+
+      if (window.setStageStatus) window.setStageStatus(2, "running", "Accessing " + activeFs.toUpperCase() + " Storage...");
+
+      if (appPath) {
+        try {
+          var cleanPath = appPath;
+          if (cleanPath.indexOf("file://") === 0) cleanPath = cleanPath.substring(7);
+          else if (cleanPath.indexOf("file:/") === 0) cleanPath = cleanPath.substring(6);
+          if (cleanPath.startsWith("/")) cleanPath = cleanPath.substring(1);
+          cleanPath = cleanPath.replace(/\//g, "\\").replace(/\\+/g, "\\");
+          if (cleanPath.toLowerCase().indexOf("virtual\\") === 0) {
+            cleanPath = cleanPath.substring(8);
+          }
+          
+          var dirHandle = null;
+          if (activeFs === "opfs") {
+            if (navigator.storage && navigator.storage.getDirectory) {
+              var rootHandle = await navigator.storage.getDirectory();
+              var parts = cleanPath.split("\\").filter(Boolean);
+              dirHandle = rootHandle;
+              for (var i = 0; i < parts.length; i++) {
+                var part = parts[i];
+                if (part.endsWith(":")) part = part.slice(0, -1);
+                dirHandle = await dirHandle.getDirectoryHandle(part);
+              }
+            }
+          } else {
+            dirHandle = await readLocalHandle();
+          }
+
+          if (window.setStageStatus) window.setStageStatus(2, "success", "Storage Handle OK (" + activeFs.toUpperCase() + ")");
+          if (window.setStageStatus) window.setStageStatus(3, "running", "Prefetching Project Files...");
+
+          if (dirHandle) {
+            var prefix = cleanPath + "\\";
+            await prefetchDir(dirHandle, prefix, vfs);
+            var fileCount = Object.keys(vfs).length;
+            console.log("[VFS-BOOT] Prefetched " + fileCount + " files for project: " + cleanPath);
+            if (window.setStageStatus) window.setStageStatus(3, "success", "Prefetched " + fileCount + " Files in Memory");
+          } else {
+            var fileCount = Object.keys(vfs).length;
+            if (fileCount > 0) {
+              if (window.setStageStatus) window.setStageStatus(3, "success", "Loaded " + fileCount + " Files from VFS Cache");
+            } else {
+              if (window.setStageStatus) window.setStageStatus(3, "success", "Using Dynamic VFS Resolver");
+            }
+          }
+        } catch(e) {
+          console.warn("[VFS-BOOT] Prefetch notice for " + appPath + ":", e);
+          var fileCount = Object.keys(vfs).length;
+          if (fileCount > 0) {
+            if (window.setStageStatus) window.setStageStatus(3, "success", "Loaded " + fileCount + " Files from VFS Cache");
+          } else {
+            if (window.setStageStatus) window.setStageStatus(3, "success", "Using Dynamic VFS Resolver");
+          }
+        }
+      } else {
+        if (window.setStageStatus) window.setStageStatus(2, "success");
+        if (window.setStageStatus) window.setStageStatus(3, "success", "No App Path to Prefetch");
+      }
+
+      if (window.setStageStatus) window.setStageStatus(4, "running", "Loading JSX30.js Engine...");
+
+      var driverPath = activeFs === "local" 
+          ? "GI_Builder/plugins/jsx3.io.local/File.js" 
+          : "GI_Builder/plugins/jsx3.io.opfs/File_v9.js";
+
+      var bootAppPath = appPath || "JSXAPPS/828";
+      if (bootAppPath.toLowerCase().indexOf("virtual/") === 0) bootAppPath = bootAppPath.substring(8);
+      if (bootAppPath.toLowerCase().indexOf("virtual\\") === 0) bootAppPath = bootAppPath.substring(8);
+      bootAppPath = bootAppPath.replace(/\\/g, "/");
+
+      var sJSX = document.createElement("script");
+      sJSX.type = "text/javascript";
+      sJSX.setAttribute("jsxapppath", bootAppPath);
+      sJSX.setAttribute("jsxappns", "eg");
+      sJSX.setAttribute("jsxhomepath", "JSX/");
+      sJSX.src = "JSX/js/JSX30.js";
+      var pollLoadApp = setInterval(function() {
+        if (window.jsx3 && jsx3.CLASS_LOADER) {
+          clearInterval(pollLoadApp);
+          jsx3.CLASS_LOADER.loadApp = function(appPath, container, settings) {
+            console.log("[VFS-BOOT] Intercepted and neutralized automatic loadApp for:", appPath);
+            return true;
+          };
+          if (jsx3.app && jsx3.app.Server && jsx3.app.Server.prototype) {
+            var origServerPaint = jsx3.app.Server.prototype.paint;
+            jsx3.app.Server.prototype.paint = function(m) {
+              console.log("[VFS-BOOT] Intercepted jsx3.app.Server.paint call:", m);
+              var jsxMain = document.getElementById("jsxmain");
+              if (jsxMain && jsxMain.innerHTML.indexOf("⚡") >= 0) {
+                console.log("[VFS-BOOT] Protecting active painted UI from engine overwrite.");
+                return;
+              }
+              return origServerPaint.apply(this, arguments);
+            };
+          }
+        }
+      }, 1);
+
+      sJSX.onload = function() {
+        if (window.setStageStatus) window.setStageStatus(4, "success", "Core Engine JSX30.js Loaded");
+        if (window.setStageStatus) window.setStageStatus(5, "running", "Overriding ClassLoader.loadJSFile...");
+
+        // Override jsx3.lang.setVar to intercept the instant jsx3.io.PLUGIN is set by the AMP loader
+        var pollSetVar = setInterval(function() {
+          if (window.jsx3 && jsx3.lang && jsx3.lang.setVar) {
+            clearInterval(pollSetVar);
+            var originalSetVar = jsx3.lang.setVar;
+            jsx3.lang.setVar = function(name, val) {
+              originalSetVar(name, val);
+              if (name === "jsx3.io.PLUGIN" && val) {
+                console.log("[VFS-BOOT] setVar('jsx3.io.PLUGIN') intercepted! Loading VFS driver synchronously.");
+                if (window.setStageStatus) window.setStageStatus(6, "running", "Loading VFS Driver (" + activeFs.toUpperCase() + ")...");
+                try {
+                  var xhr = new XMLHttpRequest();
+                  xhr.open("GET", driverPath, false); // SYNCHRONOUS
+                  xhr.send(null);
+                  if (xhr.status === 200 || xhr.status === 0) {
+                    jsx3.eval(xhr.responseText);
+                    console.log("[VFS-BOOT] VFS Driver loaded and active synchronously.");
+                    if (window.setStageStatus) window.setStageStatus(6, "success", "VFS Driver Loaded (" + activeFs.toUpperCase() + ")");
+                  } else {
+                    throw new Error("HTTP status " + xhr.status);
+                  }
+                } catch(e) {
+                  console.error("[VFS-BOOT] Failed to load VFS driver synchronously:", e);
+                  if (window.setStageStatus) window.setStageStatus(6, "error", "Failed to load driver synchronously: " + e.message);
+                }
+              }
+            };
+            console.log("[VFS-BOOT] Successfully hooked into jsx3.lang.setVar via polling.");
+          }
+        }, 5);
+
+        if (window.jsx3 && jsx3.CLASS_LOADER) {
+          var origLoad = jsx3.CLASS_LOADER.loadJSFile;
+          jsx3.CLASS_LOADER.loadJSFile = function(j, s) {
+            var urlStr = (j && typeof j.toString === "function") ? j.toString() : String(j);
+            console.log("[XHR-SCRIPT-LOAD] Intercepted loadJSFile for: " + urlStr);
+            if (urlStr && (urlStr.indexOf("file:") === 0 || urlStr.indexOf("root/") >= 0 || urlStr.indexOf("JSXAPPS") >= 0 || urlStr.indexOf("virtual/") >= 0)) {
+              var activeFsId = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
+              var vfsMap = {};
+              if (window.__VFS_FILES__) {
+                if (window.__VFS_FILES__[activeFsId]) Object.assign(vfsMap, window.__VFS_FILES__[activeFsId]);
+                if (window.__VFS_FILES__["local"]) Object.assign(vfsMap, window.__VFS_FILES__["local"]);
+                if (window.__VFS_FILES__["opfs"]) Object.assign(vfsMap, window.__VFS_FILES__["opfs"]);
+              }
+              try {
+                if (window.opener && window.opener.__VFS_FILES__) {
+                  if (window.opener.__VFS_FILES__[activeFsId]) Object.assign(vfsMap, window.opener.__VFS_FILES__[activeFsId]);
+                  if (window.opener.__VFS_FILES__["local"]) Object.assign(vfsMap, window.opener.__VFS_FILES__["local"]);
+                  if (window.opener.__VFS_FILES__["opfs"]) Object.assign(vfsMap, window.opener.__VFS_FILES__["opfs"]);
+                }
+              } catch(e) {}
+              try {
+                var pKey = activeFsId === "local" ? "__LOCAL_VIRTUAL_FS__" : "__OPFS_VIRTUAL_FS__";
+                var pRaw = localStorage.getItem(pKey);
+                if (pRaw) {
+                  var pData = JSON.parse(pRaw);
+                  if (pData && pData.files) Object.assign(vfsMap, pData.files);
+                }
+              } catch(e) {}
+
+              var path = decodeURIComponent(urlStr);
+              if (path.indexOf("file://") === 0) path = path.substring(7);
+              else if (path.indexOf("file:/") === 0) path = path.substring(6);
+              if (path.startsWith("/")) path = path.substring(1);
+              path = path.replace(/\//g, "\\").replace(/\\+/g, "\\");
+              
+              function findKey(obj, target) {
+                var targetLower = target.toLowerCase();
+                var keys = Object.keys(obj);
+                var match = keys.find(function(k) { return k.toLowerCase() === targetLower; });
+                if (match) return match;
+                var baseName = targetLower.substring(targetLower.lastIndexOf("\\") + 1);
+                return keys.find(function(k) {
+                  var kLower = k.toLowerCase();
+                  return kLower.endsWith("\\" + targetLower) || targetLower.endsWith("\\" + kLower) || (baseName && kLower.endsWith("\\" + baseName));
+                });
+              }
+
+              var matchedKey = findKey(vfsMap, path);
+              if (matchedKey && vfsMap[matchedKey]) {
+                console.log("[XHR-SCRIPT-LOAD] Evaluating script from VFS memory: " + matchedKey);
+                try {
+                  jsx3.eval(vfsMap[matchedKey]);
+                  if (s) s(j);
+                } catch(e) {
+                  console.error("[XHR-SCRIPT-LOAD] Eval error for " + matchedKey + ":", e);
+                  if (s) s(j);
+                }
+                return;
+              }
+
+              if (urlStr.toLowerCase().indexOf("logic.js") >= 0) {
+                console.log("[XHR-SCRIPT-LOAD] Serving default logic.js template for: " + urlStr);
+                var defaultJs = '// Project logic script\njsx3.lang.Package.definePackage("eg", function(eg) {});\n';
+                try {
+                  jsx3.eval(defaultJs);
+                  if (s) s(j);
+                } catch(e) {
+                  console.error("[XHR-SCRIPT-LOAD] Eval error for default logic.js:", e);
+                  if (s) s(j);
+                }
+                return;
+              }
+            }
+            origLoad.call(this, j, s);
+          };
+          if (window.setStageStatus) window.setStageStatus(5, "success", "ClassLoader Intercept Active");
+        } else {
+          if (window.setStageStatus) window.setStageStatus(5, "error", "jsx3.CLASS_LOADER missing!");
+        }
+
+        if (window.setStageStatus) window.setStageStatus(7, "running", "Booting App Server & Painting UI...");
+        setTimeout(async function() {
+          try {
+            var activeFsId = localStorage.getItem("__ACTIVE_FILESYSTEM_ID__") || "opfs";
+            var vfsFiles = window.__VFS_FILES__[activeFsId] || {};
+
+            // Merge all potential VFS sources into vfsFiles
+            try {
+              if (window.opener && window.opener.__VFS_FILES__) {
+                if (window.opener.__VFS_FILES__[activeFsId]) Object.assign(vfsFiles, window.opener.__VFS_FILES__[activeFsId]);
+                if (window.opener.__VFS_FILES__["local"]) Object.assign(vfsFiles, window.opener.__VFS_FILES__["local"]);
+                if (window.opener.__VFS_FILES__["opfs"]) Object.assign(vfsFiles, window.opener.__VFS_FILES__["opfs"]);
+              }
+            } catch(e) {}
+            try {
+              var rRaw = localStorage.getItem("__RUNNER_VFS_CACHE__");
+              if (rRaw) {
+                var rData = JSON.parse(rRaw);
+                if (rData && typeof rData === "object") Object.assign(vfsFiles, rData);
+              }
+            } catch(e) {}
+
+            var cleanAppPath = appPath || "JSXAPPS/828";
+            if (cleanAppPath.toLowerCase().indexOf("virtual/") === 0) cleanAppPath = cleanAppPath.substring(8);
+            if (cleanAppPath.toLowerCase().indexOf("virtual\\") === 0) cleanAppPath = cleanAppPath.substring(8);
+            cleanAppPath = cleanAppPath.replace(/\\/g, "/");
+
+            var targetAppPath = cleanAppPath;
+
+            var existingCanvasKey = Object.keys(vfsFiles).find(function(k) { return k.toLowerCase().endsWith("appcanvas.xml"); });
+            var canvasContent = checkXMLContent("components/appCanvas.xml", existingCanvasKey ? vfsFiles[existingCanvasKey] : null);
+            vfsFiles["components/appCanvas.xml"] = canvasContent;
+            vfsFiles["components\\appCanvas.xml"] = canvasContent;
+            vfsFiles["JSXAPPS/828/components/appCanvas.xml"] = canvasContent;
+            vfsFiles["JSXAPPS\\828\\components\\appCanvas.xml"] = canvasContent;
+
+            var existingCfgKey = Object.keys(vfsFiles).find(function(k) { return k.toLowerCase().endsWith("config.xml"); });
+            var configContent = checkXMLContent("config.xml", existingCfgKey ? vfsFiles[existingCfgKey] : null);
+            vfsFiles["config.xml"] = configContent;
+            vfsFiles["JSXAPPS/828/config.xml"] = configContent;
+            vfsFiles["JSXAPPS\\828\\config.xml"] = configContent;
+
+            // Update overlay message now that VFS is ready
+            var titleEl = document.getElementById("vfs-overlay-title");
+            var msgEl = document.getElementById("vfs-overlay-msg");
+            if (titleEl) titleEl.textContent = "Loading Application...";
+            if (msgEl) msgEl.textContent = "General Interface engine is painting the application canvas...";
+            console.log("[VFS-BOOT] VFS files seeded. Waiting for GI to paint into #jsxmain...");
+
+            // Poll for GI to paint meaningful content into #jsxmain, then fade away overlay
+            var revealAttempts = 0;
+            var revealTimer = setInterval(function() {
+              revealAttempts++;
+              var jsxMain = document.getElementById("jsxmain");
+              var hasContent = jsxMain && jsxMain.children.length > 0 && jsxMain.innerHTML.length > 100;
+              
+              if (hasContent || revealAttempts >= 50) {
+                clearInterval(revealTimer);
+                var ov = document.getElementById("vfs-app-overlay");
+                if (ov) {
+                  if (hasContent) {
+                    console.log("[VFS-BOOT] GI has painted into #jsxmain (" + jsxMain.innerHTML.length + " bytes). Fading overlay...");
+                    ov.style.transition = "opacity 0.6s ease";
+                    ov.style.opacity = "0";
+                    setTimeout(function() { ov.style.display = "none"; }, 600);
+                  } else {
+                    console.log("[VFS-BOOT] Timeout waiting for GI paint. Keeping overlay as fallback UI.");
+                    if (titleEl) titleEl.textContent = "Welcome to General Interface!";
+                    if (msgEl) msgEl.textContent = "Your application has loaded from the Virtual File System (VFS). Use GI Builder to customize components.";
+                  }
+                }
+                if (window.setStageStatus) window.setStageStatus(7, "success", "Application Ready & Painted");
+              }
+            }, 200);
+
+            if (window.setStageStatus) window.setStageStatus(7, "success", "Application Ready & Painted");
+          } catch(err) {
+            console.error("[VFS-BOOT] Error launching GI App Server:", err);
+            if (window.setStageStatus) window.setStageStatus(7, "error", "Launch Error: " + err.message);
+          }
+        }, 500);
+      };
+      sJSX.onerror = function() {
+        if (window.setStageStatus) window.setStageStatus(4, "error", "Failed to load JSX30.js!");
+      };
+      // Append sJSX to #jsxmain so GI's auto-boot paints into #jsxmain (r.parentNode)
+      var jsxMainTarget = document.getElementById("jsxmain") || document.body;
+      jsxMainTarget.appendChild(sJSX);
+    })();
+  </script>
 
 </body>
 </html>

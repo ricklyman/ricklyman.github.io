@@ -322,10 +322,7 @@ Ra=L.indexOf(":");if(Fb>=0&&Ra>=0){var
 K=(L.substring(L.lastIndexOf("/",Fb),Fb)).toUpperCase();var
 E=(wb.substring(wb.lastIndexOf("/",Ra),Ra)).toUpperCase();return K==E;}else return Fb<0&&Ra<0;}return true;},showNewUserHomeDialog:function(){var
 ub={a:"jsx3.ide.newhome"};var
-ab=jsx3.ide.getPlugIn(ub.a);(ab.load()).when(function(){ab.openTool();});},onSelectNewUserHome:function(r,e){var
-ub={a:"File ",b:" already exists and is not a directory.",c:"When running in Internet Explorer, your workspace must be on the same drive as the General Interface installation.",d:"Error creating workspace: ",e:"Error creating user directory ",f:"."};var
-H=jsx3.ide.getSavedUserHome();if(!r.equals(H)||!r.isDirectory()||H.getFileSystem().getId()!==r.getFileSystem().getId()){if((r.getFileSystem()).hasWrite()){if(r.exists()&&!r.isDirectory()){e.alert(null,ub.a+r+ub.b);return false;}if(!jsx3.ide.iN(r)){e.alert(null,ub.c);return false;}var
-O;jsx3.tcf(function(){r.mkdirs();jsx3.ide.createUserHome(r);},function(s){s=jsx3.NativeError.wrap(s);e.alert(null,ub.d+s);jsx3.ide.LOG.error(ub.e+r+ub.f,s);O=false;});if(O!=null)return O;}jsx3.ide._setCurrentUserHome(r);}return true;},createUserHome:function(h){var
+ab=jsx3.ide.getPlugIn(ub.a);(ab.load()).when(function(){ab.openTool();});},onSelectNewUserHome:function(r,e){if(!r)return false;var ub={a:"File ",b:" already exists and is not a directory.",c:"When running in Internet Explorer, your workspace must be on the same drive as the General Interface installation.",d:"Error creating workspace: ",e:"Error creating user directory ",f:"."};if((r.getFileSystem()).hasWrite()){if(r.exists()&&!r.isDirectory()){e.alert(null,ub.a+r+ub.b);return false;}if(!jsx3.ide.iN(r)){e.alert(null,ub.c);return false;}var O;jsx3.tcf(function(){r.mkdirs();jsx3.ide.createUserHome(r);},function(s){s=jsx3.NativeError.wrap(s);e.alert(null,ub.d+s);jsx3.ide.LOG.error(ub.e+r+ub.f,s);O=false;});if(O!=null&&O===false)return false;}jsx3.ide._setCurrentUserHome(r);return true;},createUserHome:function(h){var
 G=jsx3.ide.getBuilderRelativeFile(jsx3.ide.HOME_TEMPLATE_DIR);if(G.isDirectory()){if(G.equals(h)||h.isDescendantOf(G))throw new
 jsx3.Exception("Illegal workspace: "+h);var
 _=G.listFiles();for(var
@@ -341,13 +338,7 @@ fa=G.resolve(ta);var
 X=h.resolve(ta);var
 cb=fa.read();if(cb)cb=(cb.replace(/@SHELLPATH@/g,jb)).replace(/@BUILDERPATH@/g,qa);jsx3.ide.writeBuilderFile(X,cb);}}else throw new
 jsx3.Exception("GI_USER template directory not found: "+G);},copyDirectory:function(q,b){b.mkdirs();jsx3.$A(q.listFiles()).each(function(p){if(!jsx3.ide.isFileToIgnore(p)){var
-Na=b.resolve(p.getName());if(p.isFile()){p.copyTo(Na);}else if(p.isDirectory())jsx3.ide.copyDirectory(p,Na);}});},getHomeRelativeFile:function(g){return (this.getCurrentUserHome()).resolve(g);},getSavedUserHome:function(){var
-T=(jsx3.ide.getPlugIn("jsx3.amp.persist")).getFirstProvider();if(T){var
-aa=T.get("workspace");if(aa){var
-sb=(jsx3.ide.getPlugIn("jsx3.io")).getFileForURI(jsx3.net.URI.valueOf(aa));if(sb&&sb.isDirectory())return sb;}}else jsx3.ide.LOG.error("No provider is available for persisting data between browser sessions.");return null;},getCurrentUserHome:function(){if(!jsx3.ide._CURRENT_USER_HOME){var
-_a=(jsx3.app.Browser.getLocation()).getQueryParam("jsxhome");if(_a){var
-xb=jsx3.ide.getSystemRelativeFile(_a);if(xb.isDirectory())jsx3.ide._CURRENT_USER_HOME=xb;}if(!jsx3.ide._CURRENT_USER_HOME)jsx3.ide._CURRENT_USER_HOME=jsx3.ide.getSavedUserHome();}return jsx3.ide._CURRENT_USER_HOME;},_setCurrentUserHome:function(h){var
-jb=(jsx3.ide.getPlugIn("jsx3.amp.persist")).getFirstProvider();if(jb){if(h){jb.put("workspace",(h.toURI()).toString());localStorage.setItem("__ACTIVE_FILESYSTEM_ID__", h.getFileSystem().getId());}else{jb.remove("workspace");localStorage.removeItem("__ACTIVE_FILESYSTEM_ID__");}}else jsx3.ide.LOG.error("No provider is available for persisting data between browser sessions.");}});]]></data>
+Na=b.resolve(p.getName());if(p.isFile()){p.copyTo(Na);}else if(p.isDirectory())jsx3.ide.copyDirectory(p,Na);}});},getHomeRelativeFile:function(g){return (this.getCurrentUserHome()).resolve(g);},getSavedUserHome:function(){var aa=localStorage.getItem("__SAVED_WORKSPACE_URI__");if(!aa){var T=(jsx3.ide.getPlugIn("jsx3.amp.persist")).getFirstProvider();if(T){try{aa=T.get("workspace");}catch(e){}}}if(aa){var sb=(jsx3.ide.getPlugIn("jsx3.io")).getFileForURI(jsx3.net.URI.valueOf(aa));if(sb&&sb.isDirectory())return sb;}return null;},getCurrentUserHome:function(){if(!jsx3.ide._CURRENT_USER_HOME){var _a=(jsx3.app.Browser.getLocation()).getQueryParam("jsxhome");if(_a){var xb=jsx3.ide.getSystemRelativeFile(_a);if(xb.isDirectory())jsx3.ide._CURRENT_USER_HOME=xb;}if(!jsx3.ide._CURRENT_USER_HOME)jsx3.ide._CURRENT_USER_HOME=jsx3.ide.getSavedUserHome();}return jsx3.ide._CURRENT_USER_HOME;},_setCurrentUserHome:function(h){if(h){localStorage.setItem("__SAVED_WORKSPACE_URI__",(h.toURI()).toString());localStorage.setItem("__ACTIVE_FILESYSTEM_ID__",h.getFileSystem().getId());}else{localStorage.removeItem("__SAVED_WORKSPACE_URI__");localStorage.removeItem("__ACTIVE_FILESYSTEM_ID__");}var jb=(jsx3.ide.getPlugIn("jsx3.amp.persist")).getFirstProvider();if(jb){try{if(h)jb.put("workspace",(h.toURI()).toString());else jb.remove("workspace");}catch(e){}}jsx3.ide._CURRENT_USER_HOME=h;}});]]></data>
     </script>
     <script id="palettes">
       <data><![CDATA[(jsx3.$O(jsx3.ide)).extend({rebalancePaletteDocks:function(q,m){if(m&&(m.getName()).indexOf("jsx_ide_quadrant")==0)jsx3.ide.cZ(m.getName());if(q&&((q.getParent()).getName()).indexOf("jsx_ide_quadrant")==0)jsx3.ide.cZ((q.getParent()).getName());},rebalanceAllPaletteDocks:function(d,s){jsx3.ide.cZ();},cZ:function(l){var
@@ -404,7 +395,7 @@ zb=null,kb=null;if(i){zb=(jsx3.ide.getIDESettings()).get(ub.a,ub.b);if(!zb){jsx3
 xa=jsx3.util.strEndsWith((jsx3.app.Browser.getLocation()).getPath(),".xhtml");var
 W="shell"+(xa?".xhtml":".html");var
 ga=(((jsx3.ide.getSystemDirFile()).toURI()).relativize((jsx3.ide.getActiveProjectDirectory()).toURI())).toString();if(!jsx3.util.strEmpty(h)){var
-Cb=ga.indexOf(jsx3.APP_DIR_NAME);if(Cb>=0)ga=h+"/"+ga.substring(Cb);}try{var activeFsId=localStorage.getItem("__ACTIVE_FILESYSTEM_ID__")||"opfs";var globalVFS=window.__VFS_FILES__||{};var currentFiles=globalVFS[activeFsId]||{};var projectPrefix=(jsx3.ide.getActiveProjectDirectory().getAbsolutePath()+"\\").toLowerCase();var runnerCache={};for(var f in currentFiles){var fLower=f.toLowerCase();if(fLower.indexOf(projectPrefix)===0||fLower.indexOf("settings\\")>=0){runnerCache[f]=currentFiles[f];}}console.log("[RUNNER-CACHE] FS:",activeFsId,"Prefix:",projectPrefix,"Files count:",Object.keys(currentFiles).length,"Matched count:",Object.keys(runnerCache).length);localStorage.setItem("__RUNNER_VFS_CACHE__",JSON.stringify(runnerCache));}catch(e){console.warn("[RUNNER-CACHE] Failed to save runner VFS cache:",e);}var F=jsx3.net.URI.fromParts(null,null,null,null,W,"jsxapppath="+ga,null);if(r)F=(new
+Cb=ga.indexOf(jsx3.APP_DIR_NAME);if(Cb>=0)ga=h+"/"+ga.substring(Cb);}try{var activeFsId=localStorage.getItem("__ACTIVE_FILESYSTEM_ID__")||"opfs";var persistentKey=activeFsId==="local"?"__LOCAL_VIRTUAL_FS__":"__OPFS_VIRTUAL_FS__";var persistentRaw=localStorage.getItem(persistentKey);var currentFiles={};if(persistentRaw){try{var pData=JSON.parse(persistentRaw);if(pData&&pData.files)Object.assign(currentFiles,pData.files);}catch(e){}}var globalVFS=window.__VFS_FILES__||{};if(globalVFS[activeFsId])Object.assign(currentFiles,globalVFS[activeFsId]);var activeDirObj=jsx3.ide.getActiveProjectDirectory();var activeDir=activeDirObj?activeDirObj.getAbsolutePath():"";var activeDirLower=activeDir.toLowerCase();var runnerCache={};for(var f in currentFiles){var fLower=f.toLowerCase();if(!activeDir||activeDirLower==="root"||activeDirLower==="c:\\"||activeDirLower==="\\"||activeDirLower==="/"||activeDirLower===""||(activeDirObj&&activeDirObj.isRoot&&activeDirObj.isRoot())){runnerCache[f]=currentFiles[f];}else{var prefix=(activeDir.endsWith("\\")||activeDir.endsWith("/")?activeDir:activeDir+"\\").toLowerCase();if(fLower.indexOf(prefix)===0||fLower.indexOf("settings\\")>=0||fLower.endsWith(activeDirLower)){runnerCache[f]=currentFiles[f];}}}console.log("[RUNNER-CACHE] FS:",activeFsId,"Prefix:",activeDirLower,"Files count:",Object.keys(currentFiles).length,"Matched count:",Object.keys(runnerCache).length);localStorage.setItem("__RUNNER_VFS_CACHE__",JSON.stringify(runnerCache));}catch(e){console.warn("[RUNNER-CACHE] Failed to save runner VFS cache:",e);}var F=jsx3.net.URI.fromParts(null,null,null,null,W,"jsxapppath="+ga,null);if(r)F=(new
 jsx3.net.URI(r)).resolve(F);var C=window.open(F.toString());if(C)C.focus();else jsx3.ide.LOG.error("The application did not run properly. Check that no popup blockers are running.");};jsx3.ide.openProject=function(){var
 ub={a:"jsx3.io.browser",b:"openproject",c:"Choose Project Folder",d:"Choose",e:"jsx3.ide.project",f:" is not a valid project directory."};(jsx3.ide.getPlugIn(ub.a)).chooseFolder(jsx3.IDE.getRootBlock(),{name:ub.b,modal:true,title:ub.c,okLabel:ub.d,folder:jsx3.ide.getProjectDirectory(),onChoose:(jsx3.$F(function(b){var
 Y=(jsx3.ide.getPlugIn(ub.e)).getProjectTypes();if(Y.find(function(s){return s.isProjectDir(b);})){var
@@ -414,7 +405,24 @@ A=jsx3.ide.getHomeRelativeFile(e);if(!jsx3.ide.checkProjectExists(A)){jsx3.IDE.a
 aa=jsx3.ide.PROJECT!=null;if(o||!aa){var
 Aa=jsx3.app.Browser.getLocation();var
 Ma=jsx3.net.URI.fromParts(Aa.getScheme(),Aa.getUserInfo(),Aa.getHost(),Aa.getPort(),Aa.getPath(),ub.c+e+ub.d,null);if(h){var
-na=window.open(Ma.toString());if(!na)jsx3.ide.LOG.error(ub.e+e+ub.f);}else try{window.location.href=Ma.toString();}catch(Kb){jsx3.ide.LOG.warn(ub.g+e+ub.h+jsx3.NativeError.wrap(Kb));}}else (jsx3.ide._closeDownProject()).when(function(){jsx3.ide.doOpenProject(e,h,true);});};jsx3.ide._closeDownProject=jsx3.$Y(function(a){var
+na=window.open(Ma.toString());if(!na)jsx3.ide.LOG.error(ub.e+e+ub.f);}else try{
+  var runRedirect = function() {
+    window.location.href=Ma.toString();
+  };
+  var pending = window.__VFS_PENDING_WRITES__ || [];
+  if (pending.length > 0) {
+    console.log("[VFS] Waiting for " + pending.length + " pending VFS writes before page reload...");
+    Promise.all(pending).then(function() {
+      console.log("[VFS] All writes completed. Reloading now.");
+      runRedirect();
+    }).catch(function(err) {
+      console.error("[VFS] Error waiting for writes:", err);
+      runRedirect();
+    });
+  } else {
+    runRedirect();
+  }
+}catch(Kb){jsx3.ide.LOG.warn(ub.g+e+ub.h+jsx3.NativeError.wrap(Kb));}}else (jsx3.ide._closeDownProject()).when(function(){jsx3.ide.doOpenProject(e,h,true);});};jsx3.ide._closeDownProject=jsx3.$Y(function(a){var
 fa=jsx3.ide.getPreviouslyOpenFiles()||[];(jsx3.ide.closeAll()).when(function(){jsx3.ide.syncPreviouslyOpenFiles(null,fa);a.done();});});jsx3.ide.checkProjectExists=function(o){var
 ub={a:"jsx3.ide.project"};var
 oa=(jsx3.ide.getPlugIn(ub.a)).getProjectTypes();return oa.find(function(a){return a.isProjectDir(o);})!=null;};jsx3.ide.showDeploymentOptions=function(){var
