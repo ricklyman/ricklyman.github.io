@@ -2,28 +2,138 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Day 15</title>
-    <link rel="stylesheet" href="index.css">
+    <title>HTML UL Tree View</title>
+    <style>
+        /* Base Tree Structure styling */
+        .tree, .tree ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Indent child nodes */
+        .tree ul {
+            padding-left: 20px;
+            position: relative;
+        }
+
+        /* Vertical line guide for depth */
+        .tree ul::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 6px;
+            border-left: 1px solid #ccc;
+            height: 100%;
+        }
+
+        /* Individual tree item spacing */
+        .tree li {
+            margin: 0;
+            padding: 5px 12px;
+            line-height: 20px;
+            position: relative;
+        }
+
+        /* Horizontal branch lines pointing to items */
+        .tree li::before {
+            content: "";
+            position: absolute;
+            top: 15px;
+            left: 6px;
+            border-top: 1px solid #ccc;
+            width: 6px;
+            height: 1px;
+        }
+
+        /* Fix line height on the last child element */
+        .tree li:last-child::before {
+            background: white;
+            height: auto;
+        }
+
+        /* Clickable summary alignment */
+        .tree summary {
+            cursor: pointer;
+            font-weight: bold;
+            outline: none;
+        }
+
+        /* Custom markers instead of default arrows (Optional) */
+        .tree summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .tree summary {
+            list-style: none;
+        }
+
+        .tree summary::before {
+            content: "📁 ";
+            display: inline-block;
+        }
+
+        .tree details[open] > summary::before {
+            content: "📂 ";
+        }
+
+        .tree .file::before {
+            content: "📄 ";
+        }
+    </style>
 </head>
 <body>
-    <h3></h3>
-<a href="./Breakout/index.html">Breakout Game, Install Instructions (Python)</a>
-<br><a href="./LCLFS.html">Local FileSystem IDE</a>
-<br><a href="./fileReadWrite.html">Local File Read Write</a>
-<br><a href="./OPFS.html">OPFS IDE</a>
-<br><a href="./twindex4.html">Index</a> 
-<br><a href="./pascal.html">Index - Pascal</a> 
-<br><a href="./xml/data.xml">xml xsl test</a> 
-<br><a href="./xml.html">Index - xml</a>
-<br><a href="./DOM.html">Index - DOM</a>
-<br><a href="/Duck/index.html">Duck DB</a>
-<br><a href="./nameValue.html">Local Storage</a>
-<br><a href="https://ricklyman.com">NFPT (this window)</a>
-<a href="https://ricklyman.com" target="_blank" rel="noopener noreferrer">NFPT (new window)</a>  
-<br><a href="./incubation.html">Incubation e.g.: NFPT pM</a>
-<br><a href="./tstScrape.html">empty Referer header</a>
+
+<!-- Accessible Tree Root -->
+<ul class="tree" role="tree">
+    <li role="treeitem">
+        <details open>
+            <summary>ricklyman.github.io</summary>
+            <ul role="group">
+
+                <li role="treeitem">
+                    <details>
+                        <summary>General Interface</summary>
+                        <ul role="group">
+                            <li role="treeitem" class="file">testGI.html</li>
+                            <li role="treeitem" class="file">test2GI.html</li>
+                        </ul>
+                    </details>
+                </li>
+
+                <li role="treeitem">
+                    <details>
+                        <summary>Notes</summary>
+                        <ul role="group">
+                            <li role="treeitem" class="file">pascal.html</li>
+                            <li role="treeitem" class="file">/Duck/index.html</li>
+                        </ul>
+                    </details>
+                </li>
+
+                <li role="treeitem" class="file">https://ricklyman.com</li>
+
+            </ul>
+        </details>
+    </li>
+</ul>
+
+<h3>
+    <a href="./Breakout/index.html">Breakout Game, Install Instructions (Python)</a>
+    <br><a href="./LCLFS.html">Local FileSystem IDE</a>
+    <br><a href="./fileReadWrite.html">Local File Read Write</a>
+    <br><a href="./OPFS.html">OPFS IDE</a>
+    <br><a href="./twindex4.html">Index</a>
+    <br><a href="./pascal.html">Index - Pascal</a>
+    <br><a href="./xml/data.xml">xml xsl test</a>
+    <br><a href="./xml.html">Index - xml</a>
+    <br><a href="./DOM.html">Index - DOM</a>
+    <br><a href="/Duck/index.html">Duck DB</a>
+    <br><a href="./nameValue.html">Local Storage</a>
+    <br><a href="https://ricklyman.com">NFPT (this window)</a>
+    <a href="https://ricklyman.com" target="_blank" rel="noopener noreferrer">NFPT (new window)</a>
+    <br><a href="./incubation.html">Incubation e.g.: NFPT pM</a>
+    <br><a href="./tstScrape.html">empty Referer header</a>
 </h3>
 </body>
 </html>
